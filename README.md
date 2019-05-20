@@ -31,4 +31,5 @@ The script requires Python3 with ihm, pandas, and xlrd installed.
 
 # References
 The python-ihm package and the IHM and FLR dictionaries can be found on https://github.com/ihmwg
+
 PDB-Dev: https://pdb-dev.wwpdb.org/
