@@ -905,22 +905,22 @@ def do(excel_filename, cifout_filename):
         cur_flr_fps_global_parameters = ihm.flr.FPSGlobalParameters(forster_radius = cur_flr_fps_global_parameters_fret_forster_radius_id,
                                                                       conversion_function_polynom_order = cur_flr_fps_global_parameters_conversion_function_polynom_order,
                                                                       repetition = cur_flr_fps_global_parameters_repetition,
-                                                                      AV_grid_rel = cur_flr_fps_global_parameters_av_grid_rel,
-                                                                      AV_min_grid_A = cur_flr_fps_global_parameters_av_min_grid_a,
-                                                                      AV_allowed_sphere = cur_flr_fps_global_parameters_av_allowed_sphere,
-                                                                      AV_search_nodes = cur_flr_fps_global_parameters_av_search_nodes,
-                                                                      AV_E_samples_k = cur_flr_fps_global_parameters_av_e_samples_k,
+                                                                      av_grid_rel = cur_flr_fps_global_parameters_av_grid_rel,
+                                                                      av_min_grid_a = cur_flr_fps_global_parameters_av_min_grid_a,
+                                                                      av_allowed_sphere = cur_flr_fps_global_parameters_av_allowed_sphere,
+                                                                      av_search_nodes = cur_flr_fps_global_parameters_av_search_nodes,
+                                                                      av_e_samples_k = cur_flr_fps_global_parameters_av_e_samples_k,
                                                                       sim_viscosity_adjustment = cur_flr_fps_global_parameters_sim_viscosity_adjustment,
                                                                       sim_dt_adjustment = cur_flr_fps_global_parameters_sim_dt_adjustment,
                                                                       sim_max_iter_k = cur_flr_fps_global_parameters_sim_max_iter_k,
                                                                       sim_max_force = cur_flr_fps_global_parameters_sim_max_force,
-                                                                      sim_clash_tolerance_A = cur_flr_fps_global_parameters_sim_clash_tolerance_a,
-                                                                      sim_reciprocal_kT = cur_flr_fps_global_parameters_sim_reciprocal_kt,
+                                                                      sim_clash_tolerance_a = cur_flr_fps_global_parameters_sim_clash_tolerance_a,
+                                                                      sim_reciprocal_kt = cur_flr_fps_global_parameters_sim_reciprocal_kt,
                                                                       sim_clash_potential = cur_flr_fps_global_parameters_sim_clash_potential,
-                                                                      convergence_E = cur_flr_fps_global_parameters_convergence_e,
-                                                                      convergence_F = cur_flr_fps_global_parameters_convergence_f,
-                                                                      convergence_K = cur_flr_fps_global_parameters_convergence_k,
-                                                                      convergence_T = cur_flr_fps_global_parameters_convergence_t)
+                                                                      convergence_e = cur_flr_fps_global_parameters_convergence_e,
+                                                                      convergence_f = cur_flr_fps_global_parameters_convergence_f,
+                                                                      convergence_k = cur_flr_fps_global_parameters_convergence_k,
+                                                                      convergence_t = cur_flr_fps_global_parameters_convergence_t)
 
         if cur_flr_fps_global_parameters not in list_flr_fps_global_parameters:
             list_flr_fps_global_parameters.append(cur_flr_fps_global_parameters)
@@ -2062,9 +2062,9 @@ def main(excel_filename, cifout_filename, atom_site_filename):
 
     ## For debugging: use default values
     if DEBUG:
-        excel_filename = 'example_ihm_for_input_20190510.xlsx'
-        cifout_filename = 'sample_output_20190510.cif'
-        atom_site_filename = 'atom_site_input_example_20190510.txt'
+        excel_filename = 'excel_template.xlsx'
+        cifout_filename = 'sample_output.cif'
+        atom_site_filename = 'atom_site_input_example.cif'
     do(excel_filename = excel_filename, cifout_filename = cifout_filename)
     do_add_atom_site_entries(atom_site_filename, cifout_filename)
 
