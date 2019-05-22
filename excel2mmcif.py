@@ -2044,10 +2044,30 @@ def do_add_atom_site_entries(atom_site_file, mmcif_file):
         ## remove the endline character and add the new entry
         new_entry = '%s\t%s\n'%(entry.split('\n')[0],cur_pdbx_pdb_model_num)
         new_atom_entries.append(new_entry)
+    ## Collect atom types
+    index_type_symbol = [ header.index(entry) for entry in header if '_atom_site.type_symbol' in entry]
+    if index_type_symbol == []:
+        print('ERROR: The file \'%s\' does not contain _atom_site.type_symbol. Please add this information to your file. Atom_site entries will not be written.\n')
+        return
+    index_type_symbol = index_type_symbol[0]
+    atom_types = []
+    for entry in atom_entries:
+        splitentry = entry.split()
+        cur_type_symbol = splitentry[index_type_symbol]
+        if cur_type_symbol not in atom_types:
+            atom_types.append(cur_type_symbol)
 
     ## write the header and the new entries to the mmcif_file
     print('>>> Writing atom_site entries to \'%s\''%(mmcif_file))
     outfile = open(mmcif_file,'a')
+    ## Write the atom types
+    outfile.write('#\n')
+    outfile.write('loop_\n')
+    outfile.write('_atom_type.symbol\n')
+    for entry in atom_types:
+        outfile.write('%s\n'%(entry))
+    outfile.write('#\n')
+    ## Write the atom_site entries
     outfile.write('#\n')
     outfile.write('loop_\n')
     for entry in header:
