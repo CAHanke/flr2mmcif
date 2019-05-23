@@ -2,6 +2,7 @@
 ## implementation to generate the objects and write the mmcif file in the end
 ## Christian Hanke 11.03.2019
 ## christian.hanke@hhu.de
+## version 1.0
 
 ## Note: In case of non-mandatory parameters, it should be checked whether the column is present at all or whether the respective cell in the excel sheet is empty (using pandas.isnull).
 
