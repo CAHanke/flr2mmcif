@@ -2,7 +2,7 @@
 ## implementation to generate the objects and write the mmcif file in the end
 ## Christian Hanke 11.03.2019
 ## christian.hanke@hhu.de
-## version 1.0
+## version 1.01
 
 ## Note: In case of non-mandatory parameters, it should be checked whether the column is present at all or whether the respective cell in the excel sheet is empty (using pandas.isnull).
 
@@ -1945,26 +1945,24 @@ def do(excel_filename, cifout_filename):
     FLR_collection1 = ihm.flr.FLRData()
     ## add Fret distance restraints
     for entry in list_fret_distance_restraint_groups :
-        FLR_collection1.add_distance_restraint_group(entry)
+        FLR_collection1.distance_restraint_groups.append(entry)
     ## add the poly_probe_conjugates
     for entry in list_poly_probe_conjugates:
-        FLR_collection1.add_poly_probe_conjugate(entry)
+        FLR_collection1.poly_probe_conjugates.append(entry)
 
     ## add FPS modeling
-    FPS_modeling_collection_1 = ihm.flr.ModelingCollection()
     for entry in list_FPS_AV_modeling:
-        FPS_modeling_collection_1.add_modeling(entry,'FPS_AV')
+        FLR_collection1.fps_modeling.append(entry)
     for entry in list_FPS_MPP_modeling:
-        FPS_modeling_collection_1.add_modeling(entry,'FPS_MPP')
-    FLR_collection1.add_flr_FPS_modeling(FPS_modeling_collection_1)
+        FLR_collection1.fps_modeling.append(entry)
 
     ## add the FRET model quality
     for entry in list_flr_model_quality:
-        FLR_collection1.add_fret_model_quality(entry)
+        FLR_collection1.fret_model_qualities.append(entry)
 
     ## add the FRET model distances
     for entry in list_flr_model_distances:
-        FLR_collection1.add_fret_model_distance(entry)
+        FLR_collection1.fret_model_distances.append(entry)
 
     system.flr_data = [FLR_collection1]
 
