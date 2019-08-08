@@ -316,14 +316,17 @@ def do(excel_filename, cifout_filename):
     if nr_of_entries_ihm_external_files > 0:
         for i in range(nr_of_entries_ihm_dataset):
             cur_ihm_dataset_group = xls_ihm_dataset_data['IHM_Dataset_Dataset_group'][i]
+            cur_ihm_dataset_DB_flag = xls_ihm_dataset_data['IHM_Dataset_DB_flag'][i] == 'YES'
             cur_ihm_dataset_external_reference_id = xls_ihm_dataset_data['IHM_Dataset_External_reference_id'][i]
-            ## if the current dataset group is not in the list of dataset groups yet
-            if not cur_ihm_dataset_group in tmp_list_for_dataset_groups.keys():
-                ## add it
-                tmp_list_for_dataset_groups[cur_ihm_dataset_group] = []
-            ## then add the data
-            if not list_datasets[list_dataset_external_reference_ids.index(cur_ihm_dataset_external_reference_id)] in tmp_list_for_dataset_groups[cur_ihm_dataset_group]:
-                tmp_list_for_dataset_groups[cur_ihm_dataset_group].append(list_datasets[list_dataset_external_reference_ids.index(cur_ihm_dataset_external_reference_id)])
+            ## Only if the dataset entry has an external file and is not in a database
+            if not cur_ihm_dataset_DB_flag:
+                ## if the current dataset group is not in the list of dataset groups yet
+                if not cur_ihm_dataset_group in tmp_list_for_dataset_groups.keys():
+                    ## add it
+                    tmp_list_for_dataset_groups[cur_ihm_dataset_group] = []
+                ## then add the data
+                if not list_datasets[list_dataset_external_reference_ids.index(cur_ihm_dataset_external_reference_id)] in tmp_list_for_dataset_groups[cur_ihm_dataset_group]:
+                    tmp_list_for_dataset_groups[cur_ihm_dataset_group].append(list_datasets[list_dataset_external_reference_ids.index(cur_ihm_dataset_external_reference_id)])
 
     ## create the dataset_group
     for groupkey in tmp_list_for_dataset_groups.keys():
