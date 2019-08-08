@@ -643,6 +643,38 @@ def do(excel_filename, cifout_filename):
                                                  assembly = list_structure_assemblies[list_structure_assembly_ids.index(cur_ihm_post_process_struct_assembly_id)],
                                                  dataset_group = list_dataset_groups[list_dataset_group_ids.index(cur_ihm_post_process_dataset_group_id)],
                                                  software = list_ihm_softwares[list_ihm_software_ids.index(cur_ihm_post_process_software_id)])
+        if cur_ihm_post_process_type == 'filter':
+            cur_step = ihm.analysis.FilterStep(feature = cur_ihm_post_process_feature,
+                                                 num_models_begin = cur_ihm_post_process_number_model_begin,
+                                                 num_models_end = cur_ihm_post_process_number_model_end,
+                                                 assembly = list_structure_assemblies[list_structure_assembly_ids.index(cur_ihm_post_process_struct_assembly_id)],
+                                                 dataset_group = list_dataset_groups[list_dataset_group_ids.index(cur_ihm_post_process_dataset_group_id)],
+                                                 software = list_ihm_softwares[list_ihm_software_ids.index(cur_ihm_post_process_software_id)])
+
+        if cur_ihm_post_process_type == 'rescore':
+            cur_step = ihm.analysis.RescoreStep(feature = cur_ihm_post_process_feature,
+                                                 num_models_begin = cur_ihm_post_process_number_model_begin,
+                                                 num_models_end = cur_ihm_post_process_number_model_end,
+                                                 assembly = list_structure_assemblies[list_structure_assembly_ids.index(cur_ihm_post_process_struct_assembly_id)],
+                                                 dataset_group = list_dataset_groups[list_dataset_group_ids.index(cur_ihm_post_process_dataset_group_id)],
+                                                 software = list_ihm_softwares[list_ihm_software_ids.index(cur_ihm_post_process_software_id)])
+
+        if cur_ihm_post_process_type == 'validation':
+            cur_step = ihm.analysis.ValidationStep(feature = cur_ihm_post_process_feature,
+                                                 num_models_begin = cur_ihm_post_process_number_model_begin,
+                                                 num_models_end = cur_ihm_post_process_number_model_end,
+                                                 assembly = list_structure_assemblies[list_structure_assembly_ids.index(cur_ihm_post_process_struct_assembly_id)],
+                                                 dataset_group = list_dataset_groups[list_dataset_group_ids.index(cur_ihm_post_process_dataset_group_id)],
+                                                 software = list_ihm_softwares[list_ihm_software_ids.index(cur_ihm_post_process_software_id)])
+
+        if cur_ihm_post_process_type == 'none':
+            cur_step = ihm.analysis.EmptyStep(feature = cur_ihm_post_process_feature,
+                                                 num_models_begin = cur_ihm_post_process_number_model_begin,
+                                                 num_models_end = cur_ihm_post_process_number_model_end,
+                                                 assembly = list_structure_assemblies[list_structure_assembly_ids.index(cur_ihm_post_process_struct_assembly_id)],
+                                                 dataset_group = list_dataset_groups[list_dataset_group_ids.index(cur_ihm_post_process_dataset_group_id)],
+                                                 software = list_ihm_softwares[list_ihm_software_ids.index(cur_ihm_post_process_software_id)])
+
         ## store the step for later addition to an Analysis object and also store the id
         if cur_step not in list_ihm_modeling_protocol_analysis_steps:
             list_ihm_modeling_protocol_analysis_steps.append(cur_step)
@@ -799,6 +831,9 @@ def do(excel_filename, cifout_filename):
     tmp_list_for_model_group_names = {}
     tmp_list_for_multi_state_models = {}
     tmp_list_for_multi_state_names = {}
+    ## collect model groups for the connection to the multi_state_models
+    tmp_list_multi_state_modeling_model_group_link = {}
+
     for i in range(nr_of_entries_ihm_models):
         cur_ihm_models_model_number = xls_ihm_models['IHM_Models_Model_number'][i]
         cur_ihm_models_model_name = xls_ihm_models['IHM_Models_Model_name'][i]
@@ -830,7 +865,11 @@ def do(excel_filename, cifout_filename):
             tmp_list_for_multi_state_models[cur_ihm_models_multi_state_id] = []
         tmp_list_for_multi_state_models[cur_ihm_models_multi_state_id].append(cur_model)
         tmp_list_for_multi_state_names[cur_ihm_models_multi_state_id] = cur_ihm_models_multi_state_name
-
+        ## store the ID of the model groups for the multi-state-modeling
+        if cur_ihm_models_multi_state_id not in tmp_list_multi_state_modeling_model_group_link:
+            tmp_list_multi_state_modeling_model_group_link[cur_ihm_models_multi_state_id] = []
+        if cur_ihm_models_model_group_id not in tmp_list_multi_state_modeling_model_group_link[cur_ihm_models_multi_state_id]:
+            tmp_list_multi_state_modeling_model_group_link[cur_ihm_models_multi_state_id].append(cur_ihm_models_model_group_id)
 
     ## create the model groups (model.py)
     for groupkey in tmp_list_for_model_group_models.keys():
@@ -840,13 +879,19 @@ def do(excel_filename, cifout_filename):
             list_model_group_ids.append(groupkey)
 
 
+
     ## create the state (model.py)
-    for groupkey in tmp_list_for_multi_state_models.keys():
-        cur_state = ihm.model.State(elements = [list_model_groups[list_model_group_ids.index(groupkey)]],
-                                                             name = tmp_list_for_multi_state_names[groupkey],
-                                                             experiment_type = tmp_list_collect_for_multi_state[groupkey]['experiment_type'],
-                                                             population_fraction = tmp_list_collect_for_multi_state[groupkey]['population_fraction'],
-                                                             type = tmp_list_collect_for_multi_state[groupkey]['state_type'])
+    for groupkey in tmp_list_multi_state_modeling_model_group_link.keys():
+        ## collect all model groups for the groupkey
+        cur_list_of_model_groups = []
+        for entry in tmp_list_multi_state_modeling_model_group_link[groupkey]:
+            cur_list_of_model_groups.append(list_model_groups[list_model_group_ids.index(entry)])
+        cur_state = ihm.model.State(elements = cur_list_of_model_groups,
+                                    name=tmp_list_for_multi_state_names[groupkey],
+                                    experiment_type=tmp_list_collect_for_multi_state[groupkey]['experiment_type'],
+                                    population_fraction=tmp_list_collect_for_multi_state[groupkey][
+                                        'population_fraction'],
+                                    type=tmp_list_collect_for_multi_state[groupkey]['state_type'])
         if cur_state not in list_models_states:
             list_models_states.append(cur_state)
             list_models_state_ids.append(groupkey)
