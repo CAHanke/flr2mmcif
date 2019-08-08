@@ -2,7 +2,7 @@
 ## implementation to generate the objects and write the mmcif file in the end
 ## Christian Hanke 11.03.2019
 ## christian.hanke@hhu.de
-## version 1.01
+## version 1.02
 
 ## Note: In case of non-mandatory parameters, it should be checked whether the column is present at all or whether the respective cell in the excel sheet is empty (using pandas.isnull).
 
@@ -241,6 +241,11 @@ def do(excel_filename, cifout_filename):
                     tmp_list_for_external_reference_store_dataset_group[cur_ihm_dataset_external_reference_id] = cur_ihm_dataset_group
                     tmp_list_for_external_reference_store_repository[cur_ihm_dataset_external_reference_id] = cur_repo
 
+                ## Add dataset group id to the list of dataset groups; Still needs to be filled.
+                if cur_ihm_dataset_group not in tmp_list_for_dataset_groups.keys():
+                    tmp_list_for_dataset_groups[cur_ihm_dataset_group] = []
+
+
     ######### External files #########
     if BEVERBOSE:
         print(' ... Processing tab \'External_files\' ...')
@@ -295,6 +300,8 @@ def do(excel_filename, cifout_filename):
         if cur_dataset is not None and cur_ihm_external_files_dataset_list_id not in list_dataset_ids:
             list_datasets.append(cur_dataset)
             list_dataset_ids.append(cur_ihm_external_files_dataset_list_id)
+            ## Store the external_files_reference_id as well in order to be able to use it for the Dataset groups
+            list_dataset_external_reference_ids.append(cur_ihm_external_files_reference_id)
             if cur_ihm_external_files_dataset_group not in tmp_list_for_dataset_groups.keys():
                 tmp_list_for_dataset_groups[cur_ihm_external_files_dataset_group] = []
             tmp_list_for_dataset_groups[cur_ihm_external_files_dataset_group].append(cur_dataset)
@@ -302,6 +309,21 @@ def do(excel_filename, cifout_filename):
         if cur_ihm_external_files_dataset_list_id not in tmp_list_for_dataset_subgroups.keys():
             tmp_list_for_dataset_subgroups[cur_ihm_external_files_dataset_list_id] = []
         tmp_list_for_dataset_subgroups[cur_ihm_external_files_dataset_list_id].append(cur_dataset)
+
+    ## Go through the Dataset entries again to collect all the external references belonging to one of the dataset groups
+    ## This is important because an external file could be used in multiple dataset groups
+    ## Only if external files are present at all.
+    if nr_of_entries_ihm_external_files > 0:
+        for i in range(nr_of_entries_ihm_dataset):
+            cur_ihm_dataset_group = xls_ihm_dataset_data['IHM_Dataset_Dataset_group'][i]
+            cur_ihm_dataset_external_reference_id = xls_ihm_dataset_data['IHM_Dataset_External_reference_id'][i]
+            ## if the current dataset group is not in the list of dataset groups yet
+            if not cur_ihm_dataset_group in tmp_list_for_dataset_groups.keys():
+                ## add it
+                tmp_list_for_dataset_groups[cur_ihm_dataset_group] = []
+            ## then add the data
+            if not list_datasets[list_dataset_external_reference_ids.index(cur_ihm_dataset_external_reference_id)] in tmp_list_for_dataset_groups[cur_ihm_dataset_group]:
+                tmp_list_for_dataset_groups[cur_ihm_dataset_group].append(list_datasets[list_dataset_external_reference_ids.index(cur_ihm_dataset_external_reference_id)])
 
     ## create the dataset_group
     for groupkey in tmp_list_for_dataset_groups.keys():
@@ -450,7 +472,7 @@ def do(excel_filename, cifout_filename):
         cur_ihm_starting_model_comparative_template_sequence_identity = xls_ihm_comparative_starting_model_data['IHM_starting_comparative_model_Template_sequence_identity'][i]
         cur_ihm_starting_model_comparative_template_sequence_identity_denominator_id = xls_ihm_comparative_starting_model_data['IHM_starting_comparative_model_Template_sequence_identity_denominator_id'][i]
         cur_ihm_starting_model_comparative_dataset_list_id = xls_ihm_comparative_starting_model_data['IHM_starting_comparative_model_Dataset_list_id'][i]
-        cur_ihm_starting_model_comparative_alignment_file_id = xls_ihm_comparative_starting_model_data['IHM_starting_comparative_model_Alignment_file_id'[i]]
+        cur_ihm_starting_model_comparative_alignment_file_id = xls_ihm_comparative_starting_model_data['IHM_starting_comparative_model_Alignment_file_id'][i]
 
         ## translate the sequence identity denominator for the ihm-python implementation
         cur_ihm_starting_model_comparative_template_sequence_identity_denominator_id_enum = 0
@@ -471,7 +493,7 @@ def do(excel_filename, cifout_filename):
                                                                                        seq_id_range = (cur_ihm_starting_model_comparative_seq_id_begin,cur_ihm_starting_model_comparative_seq_id_end),
                                                                                        template_seq_id_range = (cur_ihm_starting_model_comparative_template_seq_id_begin,cur_ihm_starting_model_comparative_template_seq_id_end),
                                                                                        sequence_identity = cur_ihm_starting_model_comparative_sequence_identity_object,
-                                                                                       alignment_file = list_external_files[list_external_files_ids.index(cur_ihm_starting_model_comparative_alignment_file_id)])
+                                                                                       alignment_file = list_external_files_locations[list_external_files_ids.index(cur_ihm_starting_model_comparative_alignment_file_id)])
 
         if not occurs_in_list(cur_ihm_starting_model_comparative_template_object, list_starting_model_templates):
             list_starting_model_templates.append(cur_ihm_starting_model_comparative_template_object)
@@ -860,7 +882,7 @@ def do(excel_filename, cifout_filename):
                                                 clustering_feature = cur_ihm_ensemble_clustering_feature,
                                                 name = cur_ihm_ensemble_name,
                                                 precision = cur_ihm_ensemble_precision_value,
-                                                file = None if (cur_ihm_ensemble_file_id is None) else list_external_files[list_external_files_ids.index(cur_ihm_ensemble_file_id)])
+                                                file = None if (cur_ihm_ensemble_file_id is None) else list_external_files_locations[list_external_files_ids.index(cur_ihm_ensemble_file_id)])
 
         if not occurs_in_list(cur_ihm_ensemble, list_ensembles):
             list_ensembles.append(cur_ihm_ensemble)
