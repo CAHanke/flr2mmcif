@@ -182,6 +182,7 @@ def do(excel_filename, cifout_filename):
     ## store the type of the dataset for each external reference id => This will be used later for the external files to create the datasets
     tmp_list_for_external_reference_store_dataset_type = {}
     tmp_list_for_external_reference_store_dataset_group = {}
+    tmp_list_for_external_reference_store_dataset_details = {}
     tmp_list_for_external_reference_store_repository = {}
     tmp_list_for_external_reference_store_dataset_list_id = {}
     ##
@@ -240,6 +241,7 @@ def do(excel_filename, cifout_filename):
                     tmp_list_for_external_reference_store_dataset_type[cur_ihm_dataset_external_reference_id] = cur_ihm_dataset_data_type
                     tmp_list_for_external_reference_store_dataset_group[cur_ihm_dataset_external_reference_id] = cur_ihm_dataset_group
                     tmp_list_for_external_reference_store_repository[cur_ihm_dataset_external_reference_id] = cur_repo
+                    tmp_list_for_external_reference_store_dataset_details[cur_ihm_dataset_external_reference_id] = cur_ihm_dataset_details
 
                 ## Add dataset group id to the list of dataset groups; Still needs to be filled.
                 if cur_ihm_dataset_group not in tmp_list_for_dataset_groups.keys():
@@ -268,6 +270,7 @@ def do(excel_filename, cifout_filename):
         ## from the dataset tab
         cur_ihm_external_files_dataset_type = tmp_list_for_external_reference_store_dataset_type[cur_ihm_external_files_reference_id]
         cur_ihm_external_files_dataset_group = tmp_list_for_external_reference_store_dataset_group[cur_ihm_external_files_reference_id]
+        cur_ihm_external_files_dataset_details = tmp_list_for_external_reference_store_dataset_details[cur_ihm_external_files_reference_id]
         cur_ihm_external_files_repository = tmp_list_for_external_reference_store_repository[cur_ihm_external_files_reference_id]
         cur_ihm_external_files_dataset_list_id = tmp_list_for_external_reference_store_dataset_list_id[cur_ihm_external_files_reference_id]
 
@@ -291,11 +294,11 @@ def do(excel_filename, cifout_filename):
         ## create the dataset
         cur_dataset = None
         if cur_ihm_external_files_dataset_type == 'Single molecule FRET data':
-            cur_dataset = ihm.dataset.FRETDataset(cur_location)
+            cur_dataset = ihm.dataset.FRETDataset(cur_location, details=cur_ihm_external_files_dataset_details)
         if cur_ihm_external_files_dataset_type == 'De Novo model':
-            cur_dataset = ihm.dataset.DeNovoModelDataset(cur_location)
+            cur_dataset = ihm.dataset.DeNovoModelDataset(cur_location, details=cur_ihm_external_files_dataset_details)
         if cur_ihm_external_files_dataset_type == 'Integrative model':
-            cur_dataset = ihm.dataset.IntegrativeModelDataset(cur_location)
+            cur_dataset = ihm.dataset.IntegrativeModelDataset(cur_location, details=cur_ihm_external_files_dataset_details)
         ## store the dataset in the list for dataset groups
         if cur_dataset is not None and cur_ihm_external_files_dataset_list_id not in list_dataset_ids:
             list_datasets.append(cur_dataset)
