@@ -300,7 +300,7 @@ def do(excel_filename, cifout_filename):
         if cur_ihm_external_files_dataset_type == 'Integrative model':
             cur_dataset = ihm.dataset.IntegrativeModelDataset(cur_location, details=cur_ihm_external_files_dataset_details)
         ## store the dataset in the list for dataset groups
-        if cur_dataset is not None and cur_ihm_external_files_dataset_list_id not in list_dataset_ids:
+        if cur_dataset is not None and not occurs_in_list(cur_dataset, list_datasets):
             list_datasets.append(cur_dataset)
             list_dataset_ids.append(cur_ihm_external_files_dataset_list_id)
             ## Store the external_files_reference_id as well in order to be able to use it for the Dataset groups
@@ -308,28 +308,39 @@ def do(excel_filename, cifout_filename):
             if cur_ihm_external_files_dataset_group not in tmp_list_for_dataset_groups.keys():
                 tmp_list_for_dataset_groups[cur_ihm_external_files_dataset_group] = []
             tmp_list_for_dataset_groups[cur_ihm_external_files_dataset_group].append(cur_dataset)
+        ## otherwise, use the previously generated dataset
+        else:
+            cur_dataset = list_datasets[get_index_from_list(cur_dataset,list_datasets)]
+        if cur_ihm_external_files_dataset_group not in tmp_list_for_dataset_groups.keys():
+            tmp_list_for_dataset_groups[cur_ihm_external_files_dataset_group] = []
+        if cur_dataset is not None:
+            tmp_list_for_dataset_groups[cur_ihm_external_files_dataset_group].append(cur_dataset)
         ## store the current dataset for the subgroups that correspond to the dataset_list_ids
-        if cur_ihm_external_files_dataset_list_id not in tmp_list_for_dataset_subgroups.keys():
-            tmp_list_for_dataset_subgroups[cur_ihm_external_files_dataset_list_id] = []
-        tmp_list_for_dataset_subgroups[cur_ihm_external_files_dataset_list_id].append(cur_dataset)
+        if cur_ihm_external_files_reference_id not in tmp_list_for_dataset_subgroups.keys():
+            tmp_list_for_dataset_subgroups[cur_ihm_external_files_reference_id] = []
+        if cur_dataset is not None:
+            if cur_dataset not in tmp_list_for_dataset_subgroups[cur_ihm_external_files_reference_id]:
+                tmp_list_for_dataset_subgroups[cur_ihm_external_files_reference_id].append(cur_dataset)
 
     ## Go through the Dataset entries again to collect all the external references belonging to one of the dataset groups
     ## This is important because an external file could be used in multiple dataset groups
     ## Only if external files are present at all.
-    if nr_of_entries_ihm_external_files > 0:
-        for i in range(nr_of_entries_ihm_dataset):
-            cur_ihm_dataset_group = xls_ihm_dataset_data['IHM_Dataset_Dataset_group'][i]
-            cur_ihm_dataset_DB_flag = xls_ihm_dataset_data['IHM_Dataset_DB_flag'][i] == 'YES'
-            cur_ihm_dataset_external_reference_id = xls_ihm_dataset_data['IHM_Dataset_External_reference_id'][i]
-            ## Only if the dataset entry has an external file and is not in a database
-            if not cur_ihm_dataset_DB_flag:
-                ## if the current dataset group is not in the list of dataset groups yet
-                if not cur_ihm_dataset_group in tmp_list_for_dataset_groups.keys():
-                    ## add it
-                    tmp_list_for_dataset_groups[cur_ihm_dataset_group] = []
-                ## then add the data
-                if not list_datasets[list_dataset_external_reference_ids.index(cur_ihm_dataset_external_reference_id)] in tmp_list_for_dataset_groups[cur_ihm_dataset_group]:
-                    tmp_list_for_dataset_groups[cur_ihm_dataset_group].append(list_datasets[list_dataset_external_reference_ids.index(cur_ihm_dataset_external_reference_id)])
+    for i in range(nr_of_entries_ihm_dataset):
+        cur_ihm_dataset_group = xls_ihm_dataset_data['IHM_Dataset_Dataset_group'][i]
+        cur_ihm_dataset_DB_flag = xls_ihm_dataset_data['IHM_Dataset_DB_flag'][i] == 'YES'
+        cur_ihm_dataset_external_reference_id = xls_ihm_dataset_data['IHM_Dataset_External_reference_id'][i]
+        ## Only if the dataset entry has an external file and is not in a database
+        if not cur_ihm_dataset_DB_flag:
+            ## if the current dataset group is not in the list of dataset groups yet
+            if not cur_ihm_dataset_group in tmp_list_for_dataset_groups.keys():
+                ## add it
+                tmp_list_for_dataset_groups[cur_ihm_dataset_group] = []
+            ## then add the data
+            ## check for each of the previously collected entries in the subgroups (which were collected by external reference id) whether they are already added
+            for cur_entry in tmp_list_for_dataset_subgroups[cur_ihm_dataset_external_reference_id]:
+                ## check whether the entry is already in the list for the dataset groups
+                if cur_entry not in tmp_list_for_dataset_groups[cur_ihm_dataset_group]:
+                    tmp_list_for_dataset_groups[cur_ihm_dataset_group].append(cur_entry)
 
     ## create the dataset_group
     for groupkey in tmp_list_for_dataset_groups.keys():
