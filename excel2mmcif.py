@@ -210,13 +210,34 @@ def do(excel_filename, cifout_filename):
         ## if the dataset is a database entry
         if cur_ihm_dataset_DB_flag:
             cur_dataset = None
+            cur_location = None
             ## PDB
             if cur_ihm_dataset_DB_name == 'PDB':
                 cur_location = ihm.location.PDBLocation(db_code = cur_ihm_dataset_DB_accession_code, version=cur_ihm_dataset_DB_version, details=cur_ihm_dataset_details)
-                if cur_location not in list_locations:
+                if cur_location is not None and cur_location not in list_locations:
                     list_locations.append(cur_location)
                 cur_dataset = ihm.dataset.PDBDataset(cur_location)
-                if  cur_dataset is not None and cur_dataset not in list_datasets:
+
+            ## SASBDB
+            elif cur_ihm_dataset_DB_name == 'SASBDB':
+                cur_location = ihm.location.SASBDBLocation(db_code = cur_ihm_dataset_DB_accession_code, version=cur_ihm_dataset_DB_version, details=cur_ihm_dataset_details)
+                if cur_location not in list_locations:
+                    list_locations.append(cur_location)
+                cur_dataset = ihm.dataset.SASDataset(cur_location)
+
+            ## BMRB
+            elif cur_ihm_dataset_DB_name == 'BMRB':
+                cur_location = ihm.location.BMRBLocation(db_code = cur_ihm_dataset_DB_accession_code, version=cur_ihm_dataset_DB_version, details=cur_ihm_dataset_details)
+                if cur_location not in list_locations:
+                    list_locations.append(cur_location)
+                cur_dataset = ihm.dataset.NMRDataset(cur_location)
+
+            ## TODO: handle other databases
+            else:
+                print('NOTE! Database name %s not handled.'%(cur_ihm_dataset_DB_name))
+
+            if cur_dataset is not None:
+                if cur_dataset not in list_datasets:
                     list_datasets.append(cur_dataset)
                     list_dataset_ids.append(cur_ihm_dataset_list_id)
                     list_dataset_external_reference_ids.append(cur_ihm_dataset_external_reference_id)
@@ -225,9 +246,6 @@ def do(excel_filename, cifout_filename):
                     tmp_list_for_dataset_groups[cur_ihm_dataset_group].append(cur_dataset)
                 else:
                     tmp_list_for_dataset_groups[cur_ihm_dataset_group].append(cur_dataset)
-
-            ## TODO: handle other databases
-
 
         ## otherwise it is stored in a repository
         else:
