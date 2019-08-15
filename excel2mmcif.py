@@ -661,8 +661,8 @@ def do(excel_filename, cifout_filename):
         cur_ihm_post_process_type = xls_ihm_modeling_protocol_post_process_data['IHM_Post_process_Type'][i]
         cur_ihm_post_process_feature = xls_ihm_modeling_protocol_post_process_data['IHM_Post_process_Feature'][i]
         cur_ihm_post_process_feature_name = xls_ihm_modeling_protocol_post_process_data['IHM_Post_process_Feature_name'][i]
-        cur_ihm_post_process_number_model_begin = None if ('IHM_Post_process_Number_model_begin' not in xls_ihm_modeling_protocol_post_process_data.keys() or pandas.isnull(xls_ihm_modeling_protocol_post_process_data['IHM_Post_process_Number_model_begin'][i])) else xls_ihm_modeling_protocol_post_process_data['IHM_Post_process_Number_model_begin'][i]
-        cur_ihm_post_process_number_model_end = None if ('IHM_Post_process_Number_model_end' not in xls_ihm_modeling_protocol_post_process_data.keys() or pandas.isnull(xls_ihm_modeling_protocol_post_process_data['IHM_Post_process_Number_model_end'][i])) else xls_ihm_modeling_protocol_post_process_data['IHM_Post_process_Number_model_end'][i]
+        cur_ihm_post_process_number_model_begin = None if ('IHM_Post_process_Number_model_begin' not in xls_ihm_modeling_protocol_post_process_data.keys() or pandas.isnull(xls_ihm_modeling_protocol_post_process_data['IHM_Post_process_Number_model_begin'][i])) else int(xls_ihm_modeling_protocol_post_process_data['IHM_Post_process_Number_model_begin'][i])
+        cur_ihm_post_process_number_model_end = None if ('IHM_Post_process_Number_model_end' not in xls_ihm_modeling_protocol_post_process_data.keys() or pandas.isnull(xls_ihm_modeling_protocol_post_process_data['IHM_Post_process_Number_model_end'][i])) else int(xls_ihm_modeling_protocol_post_process_data['IHM_Post_process_Number_model_end'][i])
         cur_ihm_post_process_software_id = xls_ihm_modeling_protocol_post_process_data['IHM_Post_process_Software_id'][i]
 
 
