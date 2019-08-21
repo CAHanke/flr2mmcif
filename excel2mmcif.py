@@ -21,6 +21,7 @@ import ihm.analysis
 import ihm.protocol
 import ihm.model
 import ihm.source
+import ihm.reader
 
 BEVERBOSE = True
 DEBUG = False
@@ -72,7 +73,7 @@ def get_resatom_from_list(curobject, list):
                 return list[i]
     return None
 
-def do(excel_filename, cifout_filename):
+def do(excel_filename, cifout_filename, atom_site_filename):
     print('Starting')
 
     ## Create a system
@@ -2068,6 +2069,49 @@ def do(excel_filename, cifout_filename):
 
     system.flr_data = [FLR_collection1]
 
+    ###### atom_site ######
+    #### Handle the atom_site entries
+    #### It is important to add the atoms to the models, since models in the output might not be in the order as they are read.
+    #### This is due to the models being collected e.g. by state.
+    ## First read the mmcif file
+    ## This file has to contain _ihm_model_list.model_id, _ihm_model_group.id,
+    ##  and _ihm_model_group_link.group_id together with _ihm_model_group_link.model_id. The _ihm_model_group.id can be only one, but all model_ids have to be assigned to this model_group.
+    ## This collection of models is seperate from the system. Only the atoms for the models will be taken from it.
+
+    ## First check whether all the information is in the atom_site file. If not everything requires is present, it is added to a new file
+    new_atom_site_filename = check_atom_site_file_for_model_list(atom_site_filename)
+
+    print('<<< Adding _atom_site information from file \'%s\''%(new_atom_site_filename))
+    print('Note: It is assumed that the order of the models corresponds to the model IDs given in the excel sheet!')
+    temp_atom_site_systems = ihm.System()
+    with open(new_atom_site_filename) as fh:
+        temp_atom_site_systems = ihm.reader.read(fh)
+    cur_temp_atom_site_system = temp_atom_site_systems[0]
+    ## We assume that the model_ids are in the same order as the model ids that are given int he excel sheet.
+    ## system._all_models() returns model_group and model. So we only take the second entry in the tuple
+    list_models_ids_string = [str(x) for x in list_models_ids]
+    for this_model_group, this_model in cur_temp_atom_site_system._all_models():
+        ## Get the model_id that is assigned to the model when it is read.
+        this_model_id = this_model._id
+        ## now find the respective model
+        ## !!! Note: Converting the id here to an int assumes that the model_ids in the Model tab of the excel sheet are int as well.
+        ##           Therefore, we converted all the ids to strings before and now compare strings with strings.
+        index_of_this_model_id = list_models_ids_string.index(str(this_model_id))
+
+        cur_model = list_models[index_of_this_model_id]
+        ## Now get the atoms from this_model and add them to cur_model
+        for this_atom in this_model.get_atoms():
+            for this_asym_unit in list_asym_units:
+                ## sometimes this_atom.asym_unit.id is set and sometimes it is not. If it is not set, then this_atom.asym_unit._id is set
+                if this_atom.asym_unit.id is None:
+                    if this_atom.asym_unit._id == this_asym_unit.id:
+                        this_atom.asym_unit = this_asym_unit
+                        break
+                else:
+                    if this_atom.asym_unit.id == this_asym_unit.id:
+                        this_atom.asym_unit = this_asym_unit
+                        break
+            cur_model.add_atom(this_atom)
 
     ## Writing the cif file
     print('>>> Writing \'%s\''%(cifout_filename))
@@ -2179,6 +2223,99 @@ def do_add_atom_site_entries(atom_site_file, mmcif_file):
     outfile.close()
 
 
+
+def check_atom_site_file_for_model_list(atom_site_filename):
+    """
+    Check the file with the atom_site entries, whether it includes information on
+    _ihm_model_list, _ihm_model_group, and _ihm_model_group_link entries
+    This is important, because python-ihm will not read the atom_site entries otherwise.
+    If it is not present, then add the information and write a new file.
+    :param atom_site_filename: Filename of the mmcif file containing the atom_site entries.
+    :return: Filename of the mmcif file to be used for the atom_site entries.
+    """
+    if BEVERBOSE:
+        print(".. Checking atom_site file \'%s\' .."%(atom_site_filename))
+    infile = open(atom_site_filename,'r')
+    ## Were all the three necessary categories found?
+    ihm_model_list_found = False
+    ihm_model_group_found = False
+    ihm_model_group_link_found = False
+    ## Collect the header entries for the atom_site entries
+    atom_site_header_entries = []
+    atom_site_entries_found = False
+    atom_site_entries = []
+    for line in infile.readlines():
+        if "_ihm_model_list" in line:
+            ihm_model_list_found = True
+        if "_ihm_model_group" in line:
+            ihm_model_group_found = True
+        if "_ihm_model_group_link" in line:
+            ihm_model_group_link_found = True
+        if "_atom_site" in line:
+            atom_site_header_entries.append(line.split()[0])
+            atom_site_entries_found = True
+        ## if _atom_site header was already encountered, store the atom_site entries
+        if atom_site_entries_found:
+            ## The end of the atom_site_entries
+            if "#" in line:
+                atom_site_entries_found = False
+            if "ATOM" in line:
+                atom_site_entries.append(line)
+
+    ## Alternatively here: omit the given information on the models
+    ## If all three categories were found
+    if ihm_model_list_found and ihm_model_group_found and ihm_model_group_link_found:
+        ## TODO: Check whether the entries are correct and complete
+        ## For now, assume that all the entries are complete. So, simply return the original filename
+        return atom_site_filename
+    ## Otherwise, keep the atom_site entries and count the number of models
+    else:
+        ## get the pdbx_PDB_model_num index to find the number of models
+        pdbx_pdb_model_num_index = atom_site_header_entries.index("_atom_site.pdbx_PDB_model_num")
+        ## now go through the atom_site entries and collect the model numbers
+        model_numbers = []
+        for entry in atom_site_entries:
+            ## get the current model number
+            cur_model_number = entry.split()[pdbx_pdb_model_num_index]
+            if cur_model_number not in model_numbers:
+                model_numbers.append(cur_model_number)
+        number_of_models = len(model_numbers)
+        new_lines = []
+        ## _ihm_model_list
+        new_lines.append("loop_\n")
+        new_lines.append("_ihm_model_list.model_id\n")
+        for entry in model_numbers:
+            new_lines.append("%s\n"%(entry))
+        new_lines.append("#\n#\n")
+        ## _ihm_model_group (only one model_group)
+        new_lines.append("loop_\n")
+        new_lines.append("_ihm_model_group.id\n1\n#\n#\n")
+        ## _ihm_model_group_link
+        new_lines.append("loop_\n")
+        new_lines.append("_ihm_model_group_link.group_id\n_ihm_model_group_link.model_id\n")
+        for entry in model_numbers:
+            new_lines.append("1 %s\n"%(entry))
+        new_lines.append("#\n#\n")
+        ## add the atom_site entries
+        new_lines.append("loop_\n")
+        ## add the header
+        for entry in atom_site_header_entries:
+            new_lines.append("%s\n"%(entry))
+        ## and the entries
+        for entry in atom_site_entries:
+            new_lines.append("%s"%(entry))
+        new_lines.append("#\n")
+
+        ## write the new file
+        new_atom_site_filename = "temp_%s_mod.cif"%(atom_site_filename.split(".cif")[0])
+        outfile = open(new_atom_site_filename,'w')
+        for entry in new_lines:
+            outfile.write(entry)
+        outfile.close()
+        print("\t>>> Generated temporary file \'%s\'"%(new_atom_site_filename))
+        return new_atom_site_filename
+
+
 def main(excel_filename, cifout_filename, atom_site_filename):
 
     ## For debugging: use default values
@@ -2186,8 +2323,8 @@ def main(excel_filename, cifout_filename, atom_site_filename):
         excel_filename = 'excel_template.xlsx'
         cifout_filename = 'sample_output.cif'
         atom_site_filename = 'atom_site_input_example.cif'
-    do(excel_filename = excel_filename, cifout_filename = cifout_filename)
-    do_add_atom_site_entries(atom_site_filename, cifout_filename)
+    do(excel_filename = excel_filename, cifout_filename = cifout_filename, atom_site_filename=atom_site_filename)
+    #do_add_atom_site_entries(atom_site_filename, cifout_filename)
 
 
 if __name__ == '__main__':
