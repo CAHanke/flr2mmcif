@@ -63,8 +63,16 @@ def get_resatom_from_list(curobject, list):
                 if hasattr(curobjectattrvalue,'__slots__'):
                     if curobjectattrvalue.__slots__ == listobjectattrvalue.__slots__:
                         for innerattr in curobjectattrvalue.__slots__:
-                            if not getattr(curobjectattrvalue, innerattr) == getattr(listobjectattrvalue,innerattr):
-                                isidentical = False
+                            ## Check whether innerattr is included in an object
+                            if hasattr(curobjectattrvalue,innerattr):
+                                ## and in the other object
+                                if hasattr(listobjectattrvalue,innerattr):
+                                    ## Check whether the attributes are the same
+                                    if not getattr(curobjectattrvalue, innerattr) == getattr(listobjectattrvalue,innerattr):
+                                        isidentical = False
+                                ## If only one of the objects has the attributes, they are not identical
+                                else:
+                                    isidentical = False
                 ## otherwise, we just compare them
                 else:
                     if not (curobjectattrvalue == listobjectattrvalue):
