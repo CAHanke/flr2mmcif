@@ -2,7 +2,7 @@
 ## implementation to generate the objects and write the mmcif file in the end
 ## Christian Hanke 11.03.2019
 ## christian.hanke@hhu.de
-## version 1.02
+## version 1.03
 
 ## Note: In case of non-mandatory parameters, it should be checked whether the column is present at all or whether the respective cell in the excel sheet is empty (using pandas.isnull).
 
@@ -101,6 +101,7 @@ def do(excel_filename, cifout_filename, atom_site_filename):
     nr_of_entries_citation = len(xls_citation_data['IHM_Citation_id'])
 
     list_citations = []
+    list_citation_ids = []
 
     for i in range(nr_of_entries_citation):
         cur_citation_id = xls_citation_data['IHM_Citation_id'][i]
@@ -127,8 +128,9 @@ def do(excel_filename, cifout_filename, atom_site_filename):
 
         if not occurs_in_list(cur_citation, list_citations):
             list_citations.append(cur_citation)
+            list_citation_ids.append(cur_citation_id)
 
-    ## add all citation objects to the system
+    ## add all citati4n objects to the system
     for entry in list_citations:
         system.citations.append(entry)
 
@@ -188,6 +190,7 @@ def do(excel_filename, cifout_filename, atom_site_filename):
     list_repository_ids = []
     ## Store the datasets that belong to one group and create the dataset_group later
     tmp_list_for_dataset_groups = {}
+    tmp_info_for_dataset_groups = {}
     ## store the type of the dataset for each external reference id => This will be used later for the external files to create the datasets
     tmp_list_for_external_reference_store_dataset_type = {}
     tmp_list_for_external_reference_store_dataset_group = {}
@@ -199,6 +202,8 @@ def do(excel_filename, cifout_filename, atom_site_filename):
         cur_ihm_dataset_list_id = xls_ihm_dataset_data['IHM_Dataset_Dataset_list_id'][i]
         ## required to create the dataset_group
         cur_ihm_dataset_group = xls_ihm_dataset_data['IHM_Dataset_Dataset_group'][i]
+        cur_ihm_dataset_group_name = None if ('IHM_Dataset_Dataset_group_name' not in xls_ihm_dataset_data.keys() or pandas.isnull(xls_ihm_dataset_data['IHM_Dataset_Dataset_group_name'][i])) else xls_ihm_dataset_data['IHM_Dataset_Dataset_group_name'][i]
+        cur_ihm_dataset_group_details = None if ('IHM_Dataset_Dataset_group_details' not in xls_ihm_dataset_data.keys() or pandas.isnull(xls_ihm_dataset_data['IHM_Dataset_Dataset_group_details'][i])) else xls_ihm_dataset_data['IHM_Dataset_Dataset_group_details'][i]
         ## required to create the dataset of the correct type
         cur_ihm_dataset_data_type = xls_ihm_dataset_data['IHM_Dataset_Data_type'][i]
         ## required for the creation of the database location
@@ -214,6 +219,7 @@ def do(excel_filename, cifout_filename, atom_site_filename):
         cur_ihm_dataset_reference = xls_ihm_dataset_data['IHM_Dataset_Reference'][i]
         cur_ihm_dataset_refers_to = xls_ihm_dataset_data['IHM_Dataset_Refers_to'][i]
         cur_ihm_dataset_associated_url = xls_ihm_dataset_data['IHM_Dataset_Associated_url'][i]
+        cur_ihm_dataset_top_directory = None if ('IHM_Dataset_top_directory' not in xls_ihm_dataset_data.keys() or pandas.isnull(xls_ihm_dataset_data['IHM_Dataset_top_directory'][i])) else xls_ihm_dataset_data['IHM_Dataset_top_directory'][i]
         cur_ihm_dataset_details = None if ('IHM_Dataset_Details' not in xls_ihm_dataset_data.keys() or pandas.isnull(xls_ihm_dataset_data['IHM_Dataset_Details'][i])) else xls_ihm_dataset_data['IHM_Dataset_Details'][i]
 
         ## if the dataset is a database entry
@@ -253,6 +259,9 @@ def do(excel_filename, cifout_filename, atom_site_filename):
                 if cur_ihm_dataset_group not in tmp_list_for_dataset_groups.keys():
                     tmp_list_for_dataset_groups[cur_ihm_dataset_group] = []
                     tmp_list_for_dataset_groups[cur_ihm_dataset_group].append(cur_dataset)
+                    tmp_info_for_dataset_groups[cur_ihm_dataset_group] = {}
+                    tmp_info_for_dataset_groups[cur_ihm_dataset_group]['name'] = cur_ihm_dataset_group_name
+                    tmp_info_for_dataset_groups[cur_ihm_dataset_group]['details'] = cur_ihm_dataset_group_details
                 else:
                     tmp_list_for_dataset_groups[cur_ihm_dataset_group].append(cur_dataset)
 
@@ -261,8 +270,8 @@ def do(excel_filename, cifout_filename, atom_site_filename):
             cur_dataset = None
             if cur_ihm_dataset_reference_type == 'DOI':
                 ## TODO: root
-                cur_repo = ihm.location.Repository(doi=cur_ihm_dataset_reference, root='.', url=cur_ihm_dataset_associated_url, top_directory='')
-                if cur_repo not in list_repositories:
+                cur_repo = ihm.location.Repository(doi=cur_ihm_dataset_reference, root='.', url=cur_ihm_dataset_associated_url, top_directory=cur_ihm_dataset_top_directory)
+                if not occurs_in_list(cur_repo,list_repositories):
                     list_repositories.append(cur_repo)
                     tmp_list_for_external_reference_store_dataset_list_id[cur_ihm_dataset_external_reference_id] = cur_ihm_dataset_list_id
                     tmp_list_for_external_reference_store_dataset_type[cur_ihm_dataset_external_reference_id] = cur_ihm_dataset_data_type
@@ -273,7 +282,9 @@ def do(excel_filename, cifout_filename, atom_site_filename):
                 ## Add dataset group id to the list of dataset groups; Still needs to be filled.
                 if cur_ihm_dataset_group not in tmp_list_for_dataset_groups.keys():
                     tmp_list_for_dataset_groups[cur_ihm_dataset_group] = []
-
+                    tmp_info_for_dataset_groups[cur_ihm_dataset_group] = {}
+                    tmp_info_for_dataset_groups[cur_ihm_dataset_group]['name'] = cur_ihm_dataset_group_name
+                    tmp_info_for_dataset_groups[cur_ihm_dataset_group]['details'] = cur_ihm_dataset_group_details
 
     ######### External files #########
     if BEVERBOSE:
@@ -371,7 +382,7 @@ def do(excel_filename, cifout_filename, atom_site_filename):
 
     ## create the dataset_group
     for groupkey in tmp_list_for_dataset_groups.keys():
-        cur_dataset_group = ihm.dataset.DatasetGroup(tmp_list_for_dataset_groups[groupkey])
+        cur_dataset_group = ihm.dataset.DatasetGroup(tmp_list_for_dataset_groups[groupkey], name = tmp_info_for_dataset_groups[groupkey]['name'], details = tmp_info_for_dataset_groups[groupkey]['details'])
         list_dataset_groups.append(cur_dataset_group)
         list_dataset_group_ids.append(groupkey)
 
@@ -516,7 +527,7 @@ def do(excel_filename, cifout_filename, atom_site_filename):
         cur_ihm_starting_model_comparative_template_sequence_identity = xls_ihm_comparative_starting_model_data['IHM_starting_comparative_model_Template_sequence_identity'][i]
         cur_ihm_starting_model_comparative_template_sequence_identity_denominator_id = xls_ihm_comparative_starting_model_data['IHM_starting_comparative_model_Template_sequence_identity_denominator_id'][i]
         cur_ihm_starting_model_comparative_dataset_list_id = xls_ihm_comparative_starting_model_data['IHM_starting_comparative_model_Dataset_list_id'][i]
-        cur_ihm_starting_model_comparative_alignment_file_id = xls_ihm_comparative_starting_model_data['IHM_starting_comparative_model_Alignment_file_id'][i]
+        cur_ihm_starting_model_comparative_alignment_file_id = None if ('IHM_starting_comparative_model_Alignment_file_id' not in xls_ihm_comparative_starting_model_data.keys() or pandas.isnull(xls_ihm_comparative_starting_model_data['IHM_starting_comparative_model_Alignment_file_id'][i])) else xls_ihm_comparative_starting_model_data['IHM_starting_comparative_model_Alignment_file_id'][i]
 
         ## translate the sequence identity denominator for the ihm-python implementation
         cur_ihm_starting_model_comparative_template_sequence_identity_denominator_id_enum = 0
@@ -537,7 +548,7 @@ def do(excel_filename, cifout_filename, atom_site_filename):
                                                                                        seq_id_range = (cur_ihm_starting_model_comparative_seq_id_begin,cur_ihm_starting_model_comparative_seq_id_end),
                                                                                        template_seq_id_range = (cur_ihm_starting_model_comparative_template_seq_id_begin,cur_ihm_starting_model_comparative_template_seq_id_end),
                                                                                        sequence_identity = cur_ihm_starting_model_comparative_sequence_identity_object,
-                                                                                       alignment_file = list_external_files_locations[list_external_files_ids.index(cur_ihm_starting_model_comparative_alignment_file_id)])
+                                                                                       alignment_file = None if (cur_ihm_starting_model_comparative_alignment_file_id is None) else list_external_files_locations[list_external_files_ids.index(cur_ihm_starting_model_comparative_alignment_file_id)])
 
         if not occurs_in_list(cur_ihm_starting_model_comparative_template_object, list_starting_model_templates):
             list_starting_model_templates.append(cur_ihm_starting_model_comparative_template_object)
@@ -567,20 +578,20 @@ def do(excel_filename, cifout_filename, atom_site_filename):
         cur_ihm_instance_ordinal = xls_ihm_instance_data['IHM_Instance_Ordinal']
         cur_ihm_instance_chain_id = xls_ihm_instance_data['IHM_Instance_Chain_id'][i]
         cur_ihm_instance_entity_id = xls_ihm_instance_data['IHM_Instance_Entity_id'][i]
-        cur_ihm_instance_details = xls_ihm_instance_data['IHM_Instance_Details'][i]
+        cur_ihm_instance_details = None if ('IHM_Instance_Details' not in xls_ihm_instance_data.keys() or pandas.isnull(xls_ihm_instance_data['IHM_Instance_Details'][i])) else xls_ihm_instance_data['IHM_Instance_Details'][i]
         cur_ihm_instance_seq_begin = None if ('IHM_Instance_Seq_begin' not in xls_ihm_instance_data.keys() or pandas.isnull(xls_ihm_instance_data['IHM_Instance_Seq_begin'][i])) else int(xls_ihm_instance_data['IHM_Instance_Seq_begin'][i])
         cur_ihm_instance_seq_end = None if ('IHM_Instance_Seq_end' not in xls_ihm_instance_data.keys() or pandas.isnull(xls_ihm_instance_data['IHM_Instance_Seq_end'][i])) else int(xls_ihm_instance_data['IHM_Instance_Seq_end'][i])
         cur_ihm_instance_structure_assembly_id = xls_ihm_instance_data['IHM_Instance_Structure_assembly_id'][i]
         cur_ihm_instance_structure_assembly_name = xls_ihm_instance_data['IHM_Instance_Structure_assembly_name'][i]
         cur_ihm_instance_structure_assembly_description = xls_ihm_instance_data['IHM_Instance_Structure_assembly_description'][i]
-        cur_ihm_instance_model_representation_id = xls_ihm_instance_data['IHM_Instance_Model_representation_id'][i]
-        cur_ihm_instance_model_object_primitive = xls_ihm_instance_data['IHM_Instance_Model_object_primitive'][i]
+        cur_ihm_instance_model_representation_id = None if ('IHM_Instance_Model_representation_id' not in xls_ihm_instance_data.keys() or pandas.isnull(xls_ihm_instance_data['IHM_Instance_Model_representation_id'][i])) else xls_ihm_instance_data['IHM_Instance_Model_representation_id'][i]
+        cur_ihm_instance_model_object_primitive = None if ('IHM_Instance_Model_object_primitive' not in xls_ihm_instance_data.keys() or pandas.isnull(xls_ihm_instance_data['IHM_Instance_Model_object_primitive'][i])) else xls_ihm_instance_data['IHM_Instance_Model_object_primitive'][i]
         ## True corresponds to rigid, while False corresponds to flexible
-        cur_ihm_instance_model_mode = True if (xls_ihm_instance_data['IHM_Instance_Model_mode'][i] == 'rigid') else False
-        cur_ihm_instance_model_granularity = xls_ihm_instance_data['IHM_Instance_Model_granularity'][i]
-        cur_ihm_instance_object_count = xls_ihm_instance_data['IHM_Instance_Object_count'][i]
-        cur_ihm_instance_starting_model_id = xls_ihm_instance_data['IHM_Instance_Starting_model_id'][i]
-        cur_ihm_instance_starting_model_source = xls_ihm_instance_data['IHM_Instance_Starting_model_source'][i]
+        cur_ihm_instance_model_mode = None if ('IHM_Instance_Model_mode' not in xls_ihm_instance_data.keys() or pandas.isnull(xls_ihm_instance_data['IHM_Instance_Model_mode'][i])) else (True if (xls_ihm_instance_data['IHM_Instance_Model_mode'][i] == 'rigid') else False)
+        cur_ihm_instance_model_granularity = None if ('IHM_Instance_Model_granularity' not in xls_ihm_instance_data.keys() or  pandas.isnull(xls_ihm_instance_data['IHM_Instance_Model_granularity'][i])) else xls_ihm_instance_data['IHM_Instance_Model_granularity'][i]
+        cur_ihm_instance_object_count = None if ('IHM_Instance_Object_count' not in xls_ihm_instance_data.keys() or pandas.isnull(xls_ihm_instance_data['IHM_Instance_Object_count'][i])) else xls_ihm_instance_data['IHM_Instance_Object_count'][i]
+        cur_ihm_instance_starting_model_id = None if ('IHM_Instance_Starting_model_id' not in xls_ihm_instance_data.keys() or pandas.isnull(xls_ihm_instance_data['IHM_Instance_Starting_model_id'][i])) else xls_ihm_instance_data['IHM_Instance_Starting_model_id'][i]
+        cur_ihm_instance_starting_model_source = None if ('IHM_Instance_Starting_model_source' not in xls_ihm_instance_data.keys() or pandas.isnull(xls_ihm_instance_data['IHM_Instance_Starting_model_source'][i])) else xls_ihm_instance_data['IHM_Instance_Starting_model_source'][i]
         cur_ihm_instance_starting_model_chain_id = xls_ihm_instance_data['IHM_Instance_Starting_model_chain_id'][i]
         cur_ihm_instance_starting_model_sequence_offset = None if ('IHM_Instance_Starting_model_sequence_offset' not in xls_ihm_instance_data.keys()) else (0 if (pandas.isnull(xls_ihm_instance_data['IHM_Instance_Starting_model_sequence_offset'][i])) else int(xls_ihm_instance_data['IHM_Instance_Starting_model_sequence_offset'][i]))
         cur_ihm_instance_starting_model_dataset_list_id = xls_ihm_instance_data['IHM_Instance_Starting_model_dataset_list_id'][i]
@@ -604,23 +615,25 @@ def do(excel_filename, cifout_filename, atom_site_filename):
         #### starting_model_details
         cur_starting_model = None
         cur_templates = None
-        if cur_ihm_instance_starting_model_source == 'comparative model':
-            cur_templates = tmp_list_templates_for_starting_models[cur_ihm_instance_starting_model_id]
-        cur_starting_model = ihm.startmodel.StartingModel(list_asym_unit_ranges[list_asym_unit_ranges.index(cur_asym_unit_range)], dataset = list_datasets[list_dataset_ids.index(cur_ihm_instance_starting_model_dataset_list_id)], asym_id = cur_ihm_instance_starting_model_chain_id,offset=cur_ihm_instance_starting_model_sequence_offset, templates = cur_templates)
+        if cur_ihm_instance_starting_model_id is not None:
+            if cur_ihm_instance_starting_model_source == 'comparative model':
+                cur_templates = tmp_list_templates_for_starting_models[cur_ihm_instance_starting_model_id]
+            cur_starting_model = ihm.startmodel.StartingModel(list_asym_unit_ranges[list_asym_unit_ranges.index(cur_asym_unit_range)], dataset = list_datasets[list_dataset_ids.index(cur_ihm_instance_starting_model_dataset_list_id)], asym_id = cur_ihm_instance_starting_model_chain_id,offset=cur_ihm_instance_starting_model_sequence_offset, templates = cur_templates)
 
         #### model_representation
         ## !!! Note: Only by-atom tested so far
-        if cur_ihm_instance_model_granularity == 'by-atom':
-            cur_model_representation = ihm.representation.AtomicSegment(cur_asym_unit_range,rigid=cur_ihm_instance_model_mode, starting_model = cur_starting_model)
-        if cur_ihm_instance_model_granularity == 'by-residue':
-            cur_model_representation = ihm.representation.ResidueSegment(cur_asym_unit_range, rigid=cur_ihm_instance_model_mode, primitive = cur_ihm_instance_model_object_primitive, starting_model= cur_starting_model)
-        if cur_ihm_instance_model_granularity == 'multi-residue':
-            cur_model_representation = ihm.representation.MultiResidueSegment(cur_asym_unit_range, rigid=cur_ihm_instance_model_mode, primitive = cur_ihm_instance_model_object_primitive, starting_model= cur_starting_model)
-        if cur_ihm_instance_model_granularity == 'by-feature':
-            cur_model_representation = ihm.representation.FeatureSegment(cur_asym_unit_range, rigid=cur_ihm_instance_model_mode, primitive = cur_ihm_instance_model_object_primitive, count= cur_ihm_instance_object_count, starting_model= cur_starting_model)
-        if cur_ihm_instance_model_representation_id not in tmp_list_for_model_representations.keys():
-            tmp_list_for_model_representations[cur_ihm_instance_model_representation_id] = []
-        tmp_list_for_model_representations[cur_ihm_instance_model_representation_id].append(cur_model_representation)
+        if cur_ihm_instance_model_representation_id is not None:
+            if cur_ihm_instance_model_granularity == 'by-atom':
+                cur_model_representation = ihm.representation.AtomicSegment(cur_asym_unit_range,rigid=cur_ihm_instance_model_mode, starting_model = cur_starting_model)
+            if cur_ihm_instance_model_granularity == 'by-residue':
+                cur_model_representation = ihm.representation.ResidueSegment(cur_asym_unit_range, rigid=cur_ihm_instance_model_mode, primitive = cur_ihm_instance_model_object_primitive, starting_model= cur_starting_model)
+            if cur_ihm_instance_model_granularity == 'multi-residue':
+                cur_model_representation = ihm.representation.MultiResidueSegment(cur_asym_unit_range, rigid=cur_ihm_instance_model_mode, primitive = cur_ihm_instance_model_object_primitive, starting_model= cur_starting_model)
+            if cur_ihm_instance_model_granularity == 'by-feature':
+                cur_model_representation = ihm.representation.FeatureSegment(cur_asym_unit_range, rigid=cur_ihm_instance_model_mode, primitive = cur_ihm_instance_model_object_primitive, count= cur_ihm_instance_object_count, starting_model= cur_starting_model)
+            if cur_ihm_instance_model_representation_id not in tmp_list_for_model_representations.keys():
+                tmp_list_for_model_representations[cur_ihm_instance_model_representation_id] = []
+            tmp_list_for_model_representations[cur_ihm_instance_model_representation_id].append(cur_model_representation)
 
         ## structure assembly by id
         if cur_ihm_instance_structure_assembly_id not in tmp_list_for_structure_assembly.keys():
@@ -763,7 +776,7 @@ def do(excel_filename, cifout_filename, atom_site_filename):
         cur_ihm_modeling_protocol_ensemble_flag = xls_ihm_modeling_protocol_data['IHM_Modeling_protocol_Ensemble_flag'][i] in ['Yes','YES','yes']
         cur_ihm_modeling_protocol_software_id = xls_ihm_modeling_protocol_data['IHM_Modeling_protocol_Software_id'][i]
 
-        ## store the software used for the currentl modeling protocol ordinal
+        ## store the software used for the current modeling protocol ordinal
         list_ihm_modeling_protocol_software_ids[cur_ihm_modeling_protocol_ordinal] = cur_ihm_modeling_protocol_software_id
 
         cur_step = None
@@ -811,15 +824,15 @@ def do(excel_filename, cifout_filename, atom_site_filename):
             cur_ihm_modeling_protocol.steps.append(entry)
 
         ## get the analyses_id with the respective groupkey
-        cur_analysis_id_index = list_ihm_modeling_protocol_analyses_ids.index(groupkey)
-        cur_ihm_modeling_protocol.analyses.append(list_ihm_modeling_protocol_analyses[cur_analysis_id_index])
+        ## only if there were post-processing steps
+        if len(list_ihm_modeling_protocol_analyses_ids) > 0:
+            cur_analysis_id_index = list_ihm_modeling_protocol_analyses_ids.index(groupkey)
+            cur_ihm_modeling_protocol.analyses.append(list_ihm_modeling_protocol_analyses[cur_analysis_id_index])
 
         ## finally, add the modeling protocol to the list of modeling protocols
         if cur_ihm_modeling_protocol not in list_ihm_modeling_protocols:
             list_ihm_modeling_protocols.append(cur_ihm_modeling_protocol)
             list_ihm_modeling_protocols_ids.append(groupkey)
-
-
 
 
 
@@ -831,6 +844,9 @@ def do(excel_filename, cifout_filename, atom_site_filename):
     nr_of_entries_ihm_multi_state_modeling = len(xls_ihm_multi_state_modeling['IHM_Multi_state_modeling_Ordinal_id'])
 
     tmp_list_collect_for_multi_state = {}
+    list_empty_states = []
+    list_empty_state_ids = []
+
     for i in range(nr_of_entries_ihm_multi_state_modeling):
         cur_ihm_multi_state_modeling_ordinal_id = xls_ihm_multi_state_modeling['IHM_Multi_state_modeling_Ordinal_id'][i]
         cur_ihm_multi_state_modeling_state_id = xls_ihm_multi_state_modeling['IHM_Multi_state_modeling_state_id'][i]
@@ -839,7 +855,8 @@ def do(excel_filename, cifout_filename, atom_site_filename):
         cur_ihm_multi_state_modeling_population_fraction_sd = xls_ihm_multi_state_modeling['IHM_Multi_state_modeling_population_fraction_standard_deviation'][i]
         cur_ihm_multi_state_modeling_state_type = xls_ihm_multi_state_modeling['IHM_Multi_state_modeling_state_type'][i]
         cur_ihm_multi_state_modeling_state_name = xls_ihm_multi_state_modeling['IHM_Multi_state_modeling_state_name'][i]
-        cur_ihm_multi_state_modeling_model_group_id = xls_ihm_multi_state_modeling['IHM_Multi_state_modeling_model_group_id'][i]
+        cur_ihm_multi_state_modeling_state_details = None if ('IHM_Multi_state_modeling_state_details' not in xls_ihm_multi_state_modeling.keys() or pandas.isnull(xls_ihm_multi_state_modeling['IHM_Multi_state_modeling_state_details'][i])) else xls_ihm_multi_state_modeling['IHM_Multi_state_modeling_state_details'][i]
+        cur_ihm_multi_state_modeling_model_group_id = None if ('IHM_Multi_state_modeling_model_group_id' not in xls_ihm_multi_state_modeling.keys() or pandas.isnull(xls_ihm_multi_state_modeling['IHM_Multi_state_modeling_model_group_id'][i])) else xls_ihm_multi_state_modeling['IHM_Multi_state_modeling_model_group_id'][i]
         cur_ihm_multi_state_modeling_experiment_type = xls_ihm_multi_state_modeling['IHM_Multi_state_modeling_experiment_type'][i]
 
         ## if the current state_id is not an entry in tmp_list_collect_for_multi_state yet
@@ -847,8 +864,23 @@ def do(excel_filename, cifout_filename, atom_site_filename):
             tmp_list_collect_for_multi_state[cur_ihm_multi_state_modeling_state_id] = {}
         tmp_list_collect_for_multi_state[cur_ihm_multi_state_modeling_state_id]['state_type'] = cur_ihm_multi_state_modeling_state_type
         tmp_list_collect_for_multi_state[cur_ihm_multi_state_modeling_state_id]['state_name'] = cur_ihm_multi_state_modeling_state_name
+        tmp_list_collect_for_multi_state[cur_ihm_multi_state_modeling_state_id]['state_details'] = cur_ihm_multi_state_modeling_state_details
         tmp_list_collect_for_multi_state[cur_ihm_multi_state_modeling_state_id]['experiment_type'] = cur_ihm_multi_state_modeling_experiment_type
         tmp_list_collect_for_multi_state[cur_ihm_multi_state_modeling_state_id]['population_fraction'] = cur_ihm_multi_state_modeling_population_fraction
+
+        ## If there is no model_group_ID, then the state will be added with a dummy model group
+        ## This is to allow states, for which distance restraints are derived, but no structural models are deposited
+        if cur_ihm_multi_state_modeling_model_group_id is None:
+            dummy_model_group = ihm.model.ModelGroup(elements = [])
+            cur_state = ihm.model.State(elements = [dummy_model_group],
+                                        type = cur_ihm_multi_state_modeling_state_type,
+                                        name = cur_ihm_multi_state_modeling_state_name,
+                                        details = cur_ihm_multi_state_modeling_state_details,
+                                        experiment_type = cur_ihm_multi_state_modeling_experiment_type,
+                                        population_fraction = cur_ihm_multi_state_modeling_population_fraction)
+            if cur_state not in list_empty_states:
+                list_empty_states.append(cur_state)
+                list_empty_state_ids.append(cur_ihm_multi_state_modeling_state_id)
 
 
     ###### Models ######
@@ -920,7 +952,6 @@ def do(excel_filename, cifout_filename, atom_site_filename):
             list_model_group_ids.append(groupkey)
 
 
-
     ## create the state (model.py)
     for groupkey in tmp_list_multi_state_modeling_model_group_link.keys():
         ## collect all model groups for the groupkey
@@ -932,7 +963,8 @@ def do(excel_filename, cifout_filename, atom_site_filename):
                                     experiment_type=tmp_list_collect_for_multi_state[groupkey]['experiment_type'],
                                     population_fraction=tmp_list_collect_for_multi_state[groupkey][
                                         'population_fraction'],
-                                    type=tmp_list_collect_for_multi_state[groupkey]['state_type'])
+                                    type=tmp_list_collect_for_multi_state[groupkey]['state_type'],
+                                    details = tmp_list_collect_for_multi_state[groupkey]['state_details'])
         if cur_state not in list_models_states:
             list_models_states.append(cur_state)
             list_models_state_ids.append(groupkey)
@@ -940,6 +972,9 @@ def do(excel_filename, cifout_filename, atom_site_filename):
     ## TODO? How to use this properly?
     ## create the state group (model.py)
     ## collection of all models
+    ## combine all states that include models and those that don't
+    list_models_states.extend(list_empty_states)
+    list_models_state_ids.extend(list_empty_state_ids)
     cur_state_group = ihm.model.StateGroup(elements = list_models_states)
     system.state_groups.append(cur_state_group)
 
@@ -1092,6 +1127,1088 @@ def do(excel_filename, cifout_filename, atom_site_filename):
                 list_flr_fps_mpp_groups[cur_fps_mpp_group_id] = ihm.flr.FPSMPPAtomPositionGroup()
             list_flr_fps_mpp_groups[cur_fps_mpp_group_id].add_atom_position(cur_fps_mpp_atom_position)
 
+
+
+    #### Common lists for both, reference_measurements and FLR, since both collect similar information
+    ## Sample condition
+    list_sample_conditions = []
+    ## Instruments
+    list_instruments = []
+    ## Instrument settings
+    list_inst_settings = []
+    ## Experimental conditions
+    list_exp_conditions = []
+    ## Samples
+    list_samples = []
+    list_sample_ids = []
+    ## Experiments
+    list_experiments = []
+    ## Chemical descriptors
+    list_chemical_descriptors = []
+    ## Probes
+    list_probe_donors = []
+    list_probe_acceptors = []
+    ## Modified and mutated residues
+    list_modified_residues = []
+    list_mutated_residues = []
+    ## Poly_probe_positions
+    list_poly_probe_positions = []
+    list_resatoms = []
+    list_residue_objects = []
+    ## Sample_probe_details
+    list_sample_probe_details = []
+    ## Probe_descriptor_conjugate
+    list_probe_conjugate_descriptors = []
+    ## Poly_probe_conjugate
+    list_poly_probe_conjugates = []
+    ## Reference measurement lifetimes and fractions
+    list_ref_measurement_lifetimes = []
+    ## Reference measurements
+    list_ref_measurements = []
+    ## Reference measurement groups
+    list_ref_measurement_groups = []
+    list_ref_measurement_group_ids = []
+
+    ###### Reference_measurements ######
+    ## Reference measurements for lifetime-based analysis
+    ## This tab follows the same logic as the FLR tab
+    if BEVERBOSE:
+        print(' ... Processing tab \'Reference_measurements\' ...')
+    xls_refmeas_data = pandas.read_excel(xls_file, sheet_name='Reference_measurements', skiprows=3,header=0)
+    nr_of_entries_refmeas = len(xls_refmeas_data['RefMeas_ID'])
+
+    list_of_object_indices_refmeas = []
+    for i in range(nr_of_entries_refmeas):
+        list_of_object_indices_refmeas.append({})
+
+    if nr_of_entries_refmeas != 0:
+        ## List that contains, whether the reference measurement contains information about donor or acceptor
+        list_ref_measurement_contains_donor_info = []
+        list_ref_measurement_contains_acceptor_info = []
+        for i in range(nr_of_entries_refmeas):
+            if not pandas.isnull(xls_refmeas_data['RefMeas_Poly_probe_position_donor_seq_id'][i]):
+                list_ref_measurement_contains_donor_info.append(True)
+            else:
+                list_ref_measurement_contains_donor_info.append(False)
+            if not pandas.isnull(xls_refmeas_data['RefMeas_Poly_probe_position_acceptor_seq_id'][i]):
+                list_ref_measurement_contains_acceptor_info.append(True)
+            else:
+                list_ref_measurement_contains_acceptor_info.append(False)
+
+
+        ## Ensure that only either donor or acceptor are used
+        for i in range(nr_of_entries_refmeas):
+            if list_ref_measurement_contains_donor_info[i] and list_ref_measurement_contains_acceptor_info[i]:
+                print("ERROR: Reference measurements should only be used for either donor or acceptor. If a sample was used for both, please add a separate entry in th \'Reference_measurements\' tab.")
+
+        #### Create the objects
+        ###### Sample conditions
+        for i in range(nr_of_entries_refmeas):
+            ## get the respective column for the sample condition
+            cur_sample_condition_details = None if ('RefMeas_Sample_condition' not in xls_refmeas_data.keys() or pandas.isnull(
+                xls_refmeas_data['RefMeas_Sample_condition'][i])) else xls_refmeas_data['RefMeas_Sample_condition'][i]
+            ## create the sample condition object
+            cur_sample_condition = ihm.flr.SampleCondition(details=cur_sample_condition_details)
+            ## check whether it is already in the list
+            cur_sample_condition_index = -1
+            if cur_sample_condition not in list_sample_conditions:
+                list_sample_conditions.append(cur_sample_condition)
+            ## and store the index of the respective object
+            cur_sample_condition_index = list_sample_conditions.index(cur_sample_condition)
+            list_of_object_indices_refmeas[i]['Sample_condition'] = cur_sample_condition_index
+
+#        ###### Instrument
+#        for i in range(nr_of_entries_refmeas):
+#            ## get the respective column for the sample condition
+#            cur_instrument_details = None if ('RefMeas_Instrument' not in xls_refmeas_data.keys() or pandas.isnull(
+#                xls_refmeas_data['RefMeas_Instrument'][i])) else xls_refmeas_data['RefMeas_Instrument'][i]
+#            ## create the object
+#            cur_instrument = ihm.flr.Instrument(details=cur_instrument_details)
+#            ## check whether it is already in the list
+#            cur_instrument_index = -1
+#            if cur_instrument not in list_instruments:
+#                list_instruments.append(cur_instrument)
+#            ## and store the index of the respective object
+#            cur_instrument_index = list_instruments.index(cur_instrument)
+#            list_of_object_indices_refmeas[i]['Instrument'] = cur_instrument_index
+#
+#        ###### Instrument settings
+#        for i in range(nr_of_entries_refmeas):
+#            cur_inst_setting_details = None if ('RefMeas_Instrument_setting' not in xls_refmeas_data.keys() or pandas.isnull(
+#                xls_refmeas_data['RefMeas_Instrument_setting'][i])) else xls_refmeas_data['RefMeas_Instrument_setting'][i]
+#            cur_inst_setting = ihm.flr.InstSetting(details=cur_inst_setting_details)
+#            cur_inst_setting_index = -1
+#            if cur_inst_setting not in list_inst_settings:
+#                list_inst_settings.append(cur_inst_setting)
+#            cur_inst_setting_index = list_inst_settings.index(cur_inst_setting)
+#            list_of_object_indices_refmeas[i]['Instrument_setting'] = cur_inst_setting_index
+#
+#        ###### Experimental condition
+#        for i in range(nr_of_entries_refmeas):
+#            cur_exp_condition_details = None if (
+#                        'RefMeas_Experimental_condition' not in xls_refmeas_data.keys() or pandas.isnull(
+#                    xls_refmeas_data['RefMeas_Experimental_condition'][i])) else xls_refmeas_data['RefMeas_Experimental_condition'][i]
+#            cur_exp_condition = ihm.flr.ExpCondition(details=cur_exp_condition_details)
+#            cur_exp_condition_index = -1
+#            if cur_exp_condition not in list_exp_conditions:
+#                list_exp_conditions.append(cur_exp_condition)
+#            cur_exp_condition_index = list_exp_conditions.index(cur_exp_condition)
+#            list_of_object_indices_refmeas[i]['Experimental_condition'] = cur_exp_condition_index
+
+        ###### Samples
+        for i in range(nr_of_entries_refmeas):
+            cur_sample_id = xls_refmeas_data['RefMeas_Sample_ID']
+            cur_sample_num_of_probes = int(xls_refmeas_data['RefMeas_Sample_num_of_probes'][i])
+            cur_sample_solvent_phase = xls_refmeas_data['RefMeas_Sample_solvent_phase'][i]
+            cur_sample_description = None if ('RefMeas_Sample_description' not in xls_refmeas_data.keys() or pandas.isnull(
+                xls_refmeas_data['RefMeas_Sample_description'][i])) else xls_refmeas_data['RefMeas_Sample_description'][i]
+            cur_sample_details = None if ('RefMeas_Sample_details' not in xls_refmeas_data.keys() or pandas.isnull(
+                xls_refmeas_data['RefMeas_Sample_details'][i])) else xls_refmeas_data['RefMeas_Sample_details'][i]
+            cur_entity_assembly = xls_refmeas_data['RefMeas_Entity_assembly'][i]
+            ## create the object
+            ## The entity assembly is taken from the list of entity assemblies by getting the entry that corresponds to the given entity_assembly_id (cur_entity_assembly)
+            cur_sample = ihm.flr.Sample(
+                entity_assembly=list_entity_assemblies[list_entity_assembly_ids.index(cur_entity_assembly)],
+                num_of_probes=cur_sample_num_of_probes,
+                condition=list_sample_conditions[list_of_object_indices_refmeas[i]['Sample_condition']],
+                description=cur_sample_description, details=cur_sample_details, solvent_phase=cur_sample_solvent_phase)
+            if not occurs_in_list(cur_sample, list_samples):
+                list_samples.append(cur_sample)
+                list_sample_ids.append(cur_sample_id)
+
+            cur_sample_index = list_samples.index(cur_sample)
+            list_of_object_indices_refmeas[i]['Sample'] = cur_sample_index
+
+#        ###### Experiment
+#        ## in case of the experiment, there is no need to read something from the file. Everything is defined before
+#        Experiment_1 = ihm.flr.Experiment()
+#        cur_experiment_index = -1
+#        for i in range(nr_of_entries_refmeas):
+#            ## make sure that every instrument-inst_setting-exp_condition-sample-combination is there only once
+#            cur_instrument = list_instruments[list_of_object_indices_refmeas[i]['Instrument']]
+#            cur_inst_setting = list_inst_settings[list_of_object_indices_refmeas[i]['Instrument_setting']]
+#            cur_exp_condition = list_exp_conditions[list_of_object_indices_refmeas[i]['Experimental_condition']]
+#            cur_sample = list_samples[list_of_object_indices_refmeas[i]['Sample']]
+#            cur_experiment_details = None if ('RefMeas_Experiment_Details' not in xls_refmeas_data.keys() or pandas.isnull(
+#                xls_refmeas_data['RefMeas_Experiment_Details'][i])) else xls_refmeas_data['RefMeas_Experiment_Details'][i]
+#
+#            if not Experiment_1.contains(cur_instrument, cur_inst_setting, cur_exp_condition, cur_sample):
+#                Experiment_1.add_entry(instrument=cur_instrument, inst_setting=cur_inst_setting,
+#                                       exp_condition=cur_exp_condition, sample=cur_sample,
+#                                       details=cur_experiment_details)
+#        if Experiment_1 not in list_experiments:
+#            list_experiments.append(Experiment_1)
+#        for i in range(nr_of_entries_refmeas):
+#            cur_experiment_index = list_experiments.index(Experiment_1)
+#            list_of_object_indices_refmeas[i]['Experiment'] = cur_experiment_index
+
+        ###### Probe
+
+        ##### Donor
+        #### Probe_list
+        for i in range(nr_of_entries_refmeas):
+            if list_ref_measurement_contains_donor_info[i] == True:
+                cur_probe_donor_name = xls_refmeas_data['RefMeas_Probe_donor_name'][i]
+                cur_probe_donor_origin = xls_refmeas_data['RefMeas_Probe_donor_origin'][i]
+                cur_probe_donor_link_type = xls_refmeas_data['RefMeas_Probe_donor_link_type'][i]
+                cur_reactive_probe_donor_flag = False
+                cur_reactive_probe_donor_name = None
+                ## TODO! MODIFY TO HANDLE EMPTY CELLS HERE!
+#                if 'RefMeas_Probe_donor_name' in xls_refmeas_data.keys():
+                if 'RefMeas_Reactive_probe_donor_name' in xls_refmeas_data.keys() and \
+                        not pandas.isnull(xls_refmeas_data['RefMeas_Probe_donor_name'][i]):
+                    cur_reactive_probe_donor_flag = True
+                    cur_reactive_probe_donor_name = xls_refmeas_data['RefMeas_Reactive_probe_donor_name'][i]
+                cur_probe_list_donor = ihm.flr.ProbeList(chromophore_name=cur_probe_donor_name,
+                                                         reactive_probe_flag=cur_reactive_probe_donor_flag,
+                                                         reactive_probe_name=cur_reactive_probe_donor_name,
+                                                         probe_origin=cur_probe_donor_origin,
+                                                         probe_link_type=cur_probe_donor_link_type)
+                ## Probe_descriptor
+                cur_probe_descriptor_donor = None
+                cur_reactive_probe_donor_chemical_descriptor = None
+                ## index of the reactive_probe_chemical_descriptor in the list_chemical_descriptors
+
+                cur_chromophore_donor_chemical_descriptor = None
+                ## index of the chromophore in the list_chemical_descriptors
+                ## Reactive probe donor chemical descriptor
+                ## if there is a name given and at least a smiles, canonical smiles, inchi, or inchi-key
+                if ('RefMeas_Reactive_probe_donor_name' in xls_refmeas_data.keys()
+                        and not pandas.isnull(xls_refmeas_data['RefMeas_Reactive_probe_donor_name'][i])
+                        and (('RefMeas_Reactive_probe_donor_smiles' in xls_refmeas_data.keys()
+                          and not pandas.isnull(xls_refmeas_data['RefMeas_Reactive_probe_donor_smiles'][i]))
+                         or ('RefMeas_Reactive_probe_donor_smiles_canonical' in xls_refmeas_data.keys()
+                             and not pandas.isnull(xls_refmeas_data['RefMeas_Reactive_probe_donor_smiles_canonical'][i]))
+                         or ('RefMeas_Reactive_probe_donor_inchi' in xls_refmeas_data.keys()
+                             and not pandas.isnull(xls_refmeas_data['RefMeas_Reactive_probe_donor_inchi'][i]))
+                         or ('RefMeas_Reactive_probe_donor_inchi_key' in xls_refmeas_data.keys()
+                             and not pandas.isnull(xls_refmeas_data['RefMeas_Reactive_probe_donor_inchi_key'][i])))):
+                    cur_reactive_probe_donor_chemical_descriptor = ihm.ChemDescriptor(
+                        auth_name=xls_refmeas_data['RefMeas_Reactive_probe_donor_name'][i],
+                        chem_comp_id= None if (
+                                'RefMeas_Reactive_probe_donor_chem_comp_id' not in xls_refmeas_data.keys()
+                                or pandas.isnull(xls_refmeas_data['RefMeas_Reactive_probe_donor_chem_comp_id'][i]))
+                                    else xls_refmeas_data['RefMeas_Reactive_probe_donor_chem_comp_id'][i],
+                        chemical_name=None if (
+                                'RefMeas_Reactive_probe_donor_chemical_name' not in xls_refmeas_data.keys()
+                                or pandas.isnull(xls_refmeas_data['RefMeas_Reactive_probe_donor_chemical_name'][i]))
+                                    else xls_refmeas_data['RefMeas_Reactive_probe_donor_chemical_name'][i],
+                        common_name=None if (
+                                'RefMeas_Reactive_probe_donor_common_name' not in xls_refmeas_data.keys()
+                                or pandas.isnull(xls_refmeas_data['RefMeas_Reactive_probe_donor_common_name'][i]))
+                                    else xls_refmeas_data['RefMeas_Reactive_probe_donor_common_name'][i],
+                        smiles=None if (
+                                'RefMeas_Reactive_probe_donor_smiles' not in xls_refmeas_data.keys()
+                                or pandas.isnull(xls_refmeas_data['RefMeas_Reactive_probe_donor_smiles'][i]))
+                                    else xls_refmeas_data['RefMeas_Reactive_probe_donor_smiles'][i],
+                        smiles_canonical=None if (
+                                'RefMeas_Reactive_probe_donor_smiles_canonical' not in xls_refmeas_data.keys()
+                                or pandas.isnull(xls_refmeas_data['RefMeas_Reactive_probe_donor_smiles_canonical'][i]))
+                                    else xls_refmeas_data['RefMeas_Reactive_probe_donor_smiles_canonical'][i],
+                        inchi=None if (
+                                'RefMeas_Reactive_probe_donor_inchi' not in xls_refmeas_data.keys()
+                                or pandas.isnull(xls_refmeas_data['RefMeas_Reactive_probe_donor_inchi'][i]))
+                                    else xls_refmeas_data['RefMeas_Reactive_probe_donor_inchi'][i],
+                        inchi_key=None if (
+                                'RefMeas_Reactive_probe_donor_inchi_key' not in xls_refmeas_data.keys()
+                                or pandas.isnull(xls_refmeas_data['RefMeas_Reactive_probe_donor_inchi_key'][i]))
+                                    else xls_refmeas_data['RefMeas_Reactive_probe_donor_inchi_key'][i])
+
+                ## Same for the chromophore - name and some structural description (smiles or canonical smiles or inchi or inchi key)
+                if ('RefMeas_Chromophore_donor_name' in xls_refmeas_data.keys()
+                        and not pandas.isnull(xls_refmeas_data['RefMeas_Chromophore_donor_name'][i])
+                        and (('RefMeas_Chromophore_donor_smiles' in xls_refmeas_data.keys()
+                              and not pandas.isnull(xls_refmeas_data['RefMeas_Chromophore_donor_smiles'][i]))
+                             or ('RefMeas_Chromophore_donor_smiles_canonical' in xls_refmeas_data.keys()
+                                 and not pandas.isnull(xls_refmeas_data['RefMeas_Chromophore_donor_smiles_canonical'][i]))
+                             or ('RefMeas_Chromophore_donor_inchi' in xls_refmeas_data.keys()
+                                 and not pandas.isnull(xls_refmeas_data['RefMeas_Chromophore_donor_inchi'][i]))
+                             or ('RefMeas_Chromophore_donor_inchi_key' in xls_refmeas_data.keys()
+                                 and not pandas.isnull(xls_refmeas_data['RefMeas_Chromophore_donor_inchi_key'][i])))):
+                    cur_chromophore_donor_chemical_descriptor = ihm.ChemDescriptor(\
+                        auth_name=xls_refmeas_data['RefMeas_Chromophore_donor_name'][i],
+                        chem_comp_id=None if (
+                                'RefMeas_Chromophore_donor_chem_comp_id' not in xls_refmeas_data.keys()
+                                or pandas.isnull(xls_refmeas_data['RefMeas_Chromophore_donor_chem_comp_id'][i]))
+                                    else xls_refmeas_data['RefMeas_Chromophore_donor_chem_comp_id'][i],
+                        chemical_name=None if (
+                                'RefMeas_Chromophore_donor_chemical_name' not in xls_refmeas_data.keys()
+                                or pandas.isnull(xls_refmeas_data['RefMeas_Chromophore_donor_chemical_name'][i]))
+                                    else xls_refmeas_data['RefMeas_Chromophore_donor_chemical_name'][i],
+                        common_name=None if (
+                                'RefMeas_Chromophore_donor_common_name' not in xls_refmeas_data.keys()
+                                or pandas.isnull(xls_refmeas_data['RefMeas_Chromophore_donor_common_name'][i]))
+                                    else xls_refmeas_data['RefMeas_Chromophore_donor_common_name'][i],
+                        smiles=None if (
+                                'RefMeas_Chromophore_donor_smiles' not in xls_refmeas_data.keys()
+                                or pandas.isnull(xls_refmeas_data['RefMeas_Chromophore_donor_smiles'][i]))
+                                    else xls_refmeas_data['RefMeas_Chromophore_donor_smiles'][i],
+                        smiles_canonical=None if (
+                                'RefMeas_Chromophore_donor_smiles_canonical' not in xls_refmeas_data.keys()
+                                or pandas.isnull(xls_refmeas_data['RefMeas_Chromophore_donor_smiles_canonical'][i]))
+                                    else xls_refmeas_data['RefMeas_Chromophore_donor_smiles_canonical'][i],
+                        inchi=None if (
+                                'RefMeas_Chromophore_donor_inchi' not in xls_refmeas_data.keys()
+                                or pandas.isnull(xls_refmeas_data['RefMeas_Chromophore_donor_inchi'][i]))
+                                    else xls_refmeas_data['RefMeas_Chromophore_donor_inchi'][i],
+                        inchi_key=None if (
+                                'RefMeas_Chromophore_donor_inchi_key' not in xls_refmeas_data.keys()
+                                or pandas.isnull(xls_refmeas_data['RefMeas_Chromophore_donor_inchi_key'][i]))
+                                    else xls_refmeas_data['RefMeas_Chromophore_donor_inchi_key'][i])
+
+                ## In case the current chemical descriptor is already present in the chemical descriptors list, we use that one instead of creating a new one.
+                if cur_reactive_probe_donor_chemical_descriptor is not None:
+                    if not occurs_in_list(cur_reactive_probe_donor_chemical_descriptor, list_chemical_descriptors):
+                        list_chemical_descriptors.append(cur_reactive_probe_donor_chemical_descriptor)
+                    else:
+                        cur_reactive_probe_donor_chemical_descriptor = [x for x in list_chemical_descriptors if
+                            x.__dict__ == cur_reactive_probe_donor_chemical_descriptor.__dict__][0]
+                if cur_chromophore_donor_chemical_descriptor is not None:
+                    if not occurs_in_list(cur_chromophore_donor_chemical_descriptor, list_chemical_descriptors):
+                        list_chemical_descriptors.append(cur_chromophore_donor_chemical_descriptor)
+                    else:
+                        cur_chromophore_donor_chemical_descriptor = [x for x in list_chemical_descriptors if
+                            x.__dict__ == cur_chromophore_donor_chemical_descriptor.__dict__][0]
+
+                cur_probe_descriptor_donor = ihm.flr.ProbeDescriptor(
+                    reactive_probe_chem_descriptor=cur_reactive_probe_donor_chemical_descriptor,
+                    chromophore_chem_descriptor=cur_chromophore_donor_chemical_descriptor,
+                    chromophore_center_atom=None if (
+                                'RefMeas_Chromophore_donor_center_atom' not in xls_refmeas_data.keys() or pandas.isnull(
+                            xls_refmeas_data['RefMeas_Chromophore_donor_center_atom'][i])) else
+                    xls_refmeas_data['RefMeas_Chromophore_donor_center_atom'][i])
+
+                if not occurs_in_list(cur_probe_descriptor_donor, list_chemical_descriptors):
+                    list_chemical_descriptors.append(cur_probe_descriptor_donor)
+                else:
+                    cur_probe_descriptor_donor = \
+                    [x for x in list_chemical_descriptors if x.__dict__ == cur_probe_descriptor_donor.__dict__][0]
+
+                cur_probe_donor = ihm.flr.Probe(probe_list_entry=cur_probe_list_donor,
+                                                probe_descriptor=cur_probe_descriptor_donor)
+
+                cur_probe_donor_index = -1
+                if cur_probe_donor not in list_probe_donors:
+                    list_probe_donors.append(cur_probe_donor)
+                cur_probe_donor_index = list_probe_donors.index(cur_probe_donor)
+                list_of_object_indices_refmeas[i]['Probe_donor'] = cur_probe_donor_index
+
+        ##### Acceptor
+        #### Probe_list
+        for i in range(nr_of_entries_refmeas):
+            if list_ref_measurement_contains_acceptor_info[i] == True:
+
+                cur_probe_acceptor_name = xls_refmeas_data['RefMeas_Probe_acceptor_name'][i]
+                cur_probe_acceptor_origin = xls_refmeas_data['RefMeas_Probe_acceptor_origin'][i]
+                cur_probe_acceptor_link_type = xls_refmeas_data['RefMeas_Probe_acceptor_link_type'][i]
+                cur_reactive_probe_acceptor_flag = False
+                cur_reactive_probe_acceptor_name = None
+                if 'RefMeas_Reactive_probe_acceptor_name' in xls_refmeas_data.keys() and \
+                        not pandas.isnull(xls_refmeas_data['RefMeas_Reactive_probe_acceptor_name'][i]):
+                    cur_reactive_probe_acceptor_flag = True
+                    cur_reactive_probe_acceptor_name = xls_refmeas_data['RefMeas_Reactive_probe_acceptor_name'][i]
+                cur_probe_list_acceptor = ihm.flr.ProbeList(chromophore_name=cur_probe_acceptor_name,
+                                                            reactive_probe_flag=cur_reactive_probe_acceptor_flag,
+                                                            reactive_probe_name=cur_reactive_probe_acceptor_name,
+                                                            probe_origin=cur_probe_acceptor_origin,
+                                                            probe_link_type=cur_probe_acceptor_link_type)
+                ## Probe_descriptor
+                cur_probe_descriptor_acceptor = None
+                cur_reactive_probe_acceptor_chemical_descriptor = None
+                ## index of the reactive_probe_chemical_descriptor in the list_chemical_descriptors
+                cur_chromophore_acceptor_chemical_descriptor = None
+                ## Reactive probe acceptor chemical descriptor
+                ## if there is a name given and at least a smiles, canonical smiles, inchi, or inchi-key
+                if ('RefMeas_Reactive_probe_acceptor_name' in xls_refmeas_data.keys()
+                        and not pandas.isnull(xls_refmeas_data['RefMeas_Reactive_probe_acceptor_name'][i])
+                        and (('RefMeas_Reactive_probe_acceptor_smiles' in xls_refmeas_data.keys()
+                                and not pandas.isnull(xls_refmeas_data['RefMeas_Reactive_probe_acceptor_smiles'][i]))
+                             or ('RefMeas_Reactive_probe_acceptor_smiles_canonical' in xls_refmeas_data.keys()
+                                and not pandas.isnull(xls_refmeas_data['RefMeas_Reactive_probe_acceptor_smiles_canonical'][i]))
+                             or ('RefMeas_Reactive_probe_acceptor_inchi' in xls_refmeas_data.keys()
+                                 and not pandas.isnull(xls_refmeas_data['RefMeas_Reactive_probe_acceptor_inchi'][i]))
+                             or ('RefMeas_Reactive_probe_acceptor_inchi_key' in xls_refmeas_data.keys()
+                                 and not pandas.isnull(xls_refmeas_data['RefMeas_Reactive_probe_acceptor_inchi_key'][i])))):
+                    cur_reactive_probe_acceptor_chemical_descriptor = ihm.ChemDescriptor(
+                        auth_name=xls_refmeas_data['RefMeas_Reactive_probe_acceptor_name'][i],
+                        chem_comp_id=None if (
+                                'RefMeas_Reactive_probe_acceptor_chem_comp_id' not in xls_refmeas_data.keys()
+                                or pandas.isnull(xls_refmeas_data['RefMeas_Reactive_probe_acceptor_chem_comp_id'][i]))
+                                    else xls_refmeas_data['RefMeas_Reactive_probe_acceptor_chem_comp_id'][i],
+                        chemical_name=None if (
+                                'RefMeas_Reactive_probe_acceptor_chemical_name' not in xls_refmeas_data.keys()
+                                or pandas.isnull(xls_refmeas_data['RefMeas_Reactive_probe_acceptor_chemical_name'][i]))
+                                    else xls_refmeas_data['RefMeas_Reactive_probe_acceptor_chemical_name'][i],
+                        common_name=None if (
+                                'RefMeas_Reactive_probe_acceptor_common_name' not in xls_refmeas_data.keys()
+                                or pandas.isnull(xls_refmeas_data['RefMeas_Reactive_probe_acceptor_common_name'][i]))
+                                    else xls_refmeas_data['RefMeas_Reactive_probe_acceptor_common_name'][i],
+                        smiles=None if (
+                                'RefMeas_Reactive_probe_acceptor_smiles' not in xls_refmeas_data.keys()
+                                or pandas.isnull(xls_refmeas_data['RefMeas_Reactive_probe_acceptor_smiles'][i]))
+                                    else xls_refmeas_data['RefMeas_Reactive_probe_acceptor_smiles'][i],
+                        smiles_canonical=None if (
+                                'RefMeas_Reactive_probe_acceptor_smiles_canonical' not in xls_refmeas_data.keys()
+                                or pandas.isnull(xls_refmeas_data['RefMeas_Reactive_probe_acceptor_smiles_canonical'][i]))
+                                    else xls_refmeas_data['RefMeas_Reactive_probe_acceptor_smiles_canonical'][i],
+                        inchi=None if (
+                                'RefMeas_Reactive_probe_acceptor_inchi' not in xls_refmeas_data.keys()
+                                or pandas.isnull(xls_refmeas_data['RefMeas_Reactive_probe_acceptor_inchi'][i]))
+                                    else xls_refmeas_data['RefMeas_Reactive_probe_acceptor_inchi'][i],
+                        inchi_key=None if (
+                                'RefMeas_Reactive_probe_acceptor_inchi_key' not in xls_refmeas_data.keys()
+                                or pandas.isnull(xls_refmeas_data['RefMeas_Reactive_probe_acceptor_inchi_key'][i]))
+                                    else xls_refmeas_data['RefMeas_Reactive_probe_acceptor_inchi_key'][i])
+
+                if ('RefMeas_Chromophore_acceptor_name' in xls_refmeas_data.keys()
+                        and not pandas.isnull(xls_refmeas_data['RefMeas_Chromophore_acceptor_name'][i])
+                        and (('RefMeas_Chromophore_acceptor_smiles' in xls_refmeas_data.keys()
+                              and not pandas.isnull(xls_refmeas_data['RefMeas_Chromophore_acceptor_smiles'][i]))
+                             or ('RefMeas_Chromophore_acceptor_smiles_canonical' in xls_refmeas_data.keys()
+                                 and not pandas.isnull(xls_refmeas_data['RefMeas_Chromophore_acceptor_smiles_canonical'][i]))
+                             or ('RefMeas_Chromophore_acceptor_inchi' in xls_refmeas_data.keys()
+                                 and not pandas.isnull(xls_refmeas_data['RefMeas_Chromophore_acceptor_inchi'][i]))
+                             or ('RefMeas_Chromophore_acceptor_inchi_key' in xls_refmeas_data.keys()
+                                 and not pandas.isnull(xls_refmeas_data['RefMeas_Chromophore_acceptor_inchi_key'][i])))):
+                    cur_chromophore_acceptor_chemical_descriptor = ihm.ChemDescriptor(
+                        auth_name=xls_refmeas_data['RefMeas_Chromophore_acceptor_name'][i],
+                        chem_comp_id=None if (
+                                'RefMeas_Chromophore_acceptor_chem_comp_id' not in xls_refmeas_data.keys()
+                                or pandas.isnull(xls_refmeas_data['RefMeas_Chromophore_acceptor_chem_comp_id'][i]))
+                                    else xls_refmeas_data['RefMeas_Chromophore_acceptor_chem_comp_id'][i],
+                        chemical_name=None if (
+                                'RefMeas_Chromophore_acceptor_chemical_name' not in xls_refmeas_data.keys()
+                                or pandas.isnull(xls_refmeas_data['RefMeas_Chromophore_acceptor_chemical_name'][i]))
+                                    else xls_refmeas_data['RefMeas_Chromophore_acceptor_chemical_name'][i],
+                        common_name=None if (
+                                'RefMeas_Chromophore_acceptor_common_name' not in xls_refmeas_data.keys()
+                                or pandas.isnull(xls_refmeas_data['RefMeas_Chromophore_acceptor_common_name'][i]))
+                                    else xls_refmeas_data['RefMeas_Chromophore_acceptor_common_name'][i],
+                        smiles=None if (
+                                'RefMeas_Chromophore_acceptor_smiles' not in xls_refmeas_data.keys()
+                                or pandas.isnull(xls_refmeas_data['RefMeas_Chromophore_acceptor_smiles'][i]))
+                                    else xls_refmeas_data['RefMeas_Chromophore_acceptor_smiles'][i],
+                        smiles_canonical=None if (
+                                'RefMeas_Chromophore_acceptor_smiles_canonical' not in xls_refmeas_data.keys()
+                                or pandas.isnull(xls_refmeas_data['RefMeas_Chromophore_acceptor_smiles_canonical'][i]))
+                                    else xls_refmeas_data['RefMeas_Chromophore_acceptor_smiles_canonical'][i],
+                        inchi=None if (
+                                'RefMeas_Chromophore_acceptor_inchi' not in xls_refmeas_data.keys()
+                                or pandas.isnull(xls_refmeas_data['RefMeas_Chromophore_acceptor_inchi'][i]))
+                                    else xls_refmeas_data['RefMeas_Chromophore_acceptor_inchi'][i],
+                        inchi_key=None if (
+                                'RefMeas_Chromophore_acceptor_inchi_key' not in xls_refmeas_data.keys()
+                                or pandas.isnull(xls_refmeas_data['RefMeas_Chromophore_acceptor_inchi_key'][i]))
+                                    else xls_refmeas_data['RefMeas_Chromophore_acceptor_inchi_key'][i])
+
+                if cur_reactive_probe_acceptor_chemical_descriptor is not None:
+                    if not occurs_in_list(cur_reactive_probe_acceptor_chemical_descriptor, list_chemical_descriptors):
+                        list_chemical_descriptors.append(cur_reactive_probe_acceptor_chemical_descriptor)
+                    else:
+                        cur_reactive_probe_acceptor_chemical_descriptor = [x for x in list_chemical_descriptors if
+                                    x.__dict__ == cur_reactive_probe_acceptor_chemical_descriptor.__dict__][0]
+                if cur_chromophore_acceptor_chemical_descriptor is not None:
+                    if not occurs_in_list(cur_chromophore_acceptor_chemical_descriptor, list_chemical_descriptors):
+                        list_chemical_descriptors.append(cur_chromophore_acceptor_chemical_descriptor)
+                    else:
+                        cur_chromophore_acceptor_chemical_descriptor = [x for x in list_chemical_descriptors if
+                                    x.__dict__ == cur_chromophore_acceptor_chemical_descriptor.__dict__][0]
+
+                cur_probe_descriptor_acceptor = ihm.flr.ProbeDescriptor(
+                    reactive_probe_chem_descriptor=cur_reactive_probe_acceptor_chemical_descriptor,
+                    chromophore_chem_descriptor=cur_chromophore_acceptor_chemical_descriptor,
+                    chromophore_center_atom=None if (
+                                'RefMeas_Chromophore_acceptor_center_atom' not in xls_refmeas_data.keys()
+                                or pandas.isnull(xls_refmeas_data['RefMeas_Chromophore_acceptor_center_atom'][i]))
+                                    else xls_refmeas_data['RefMeas_Chromophore_acceptor_center_atom'][i])
+
+                if not occurs_in_list(cur_probe_descriptor_acceptor, list_chemical_descriptors):
+                    list_chemical_descriptors.append(cur_probe_descriptor_acceptor)
+                else:
+                    cur_probe_descriptor_acceptor = \
+                    [x for x in list_chemical_descriptors if x.__dict__ == cur_probe_descriptor_acceptor.__dict__][0]
+
+                cur_probe_acceptor = ihm.flr.Probe(probe_list_entry=cur_probe_list_acceptor,
+                                                   probe_descriptor=cur_probe_descriptor_acceptor)
+
+                cur_probe_acceptor_index = -1
+                if cur_probe_acceptor not in list_probe_acceptors:
+                    list_probe_acceptors.append(cur_probe_acceptor)
+                cur_probe_acceptor_index = list_probe_acceptors.index(cur_probe_acceptor)
+                list_of_object_indices_refmeas[i]['Probe_acceptor'] = cur_probe_acceptor_index
+
+        ###### Modified and mutated residues
+        for i in range(nr_of_entries_refmeas):
+            if list_ref_measurement_contains_donor_info[i]:
+                if ('RefMeas_Modified_residue_donor_name' in xls_refmeas_data.keys()
+                    and not pandas.isnull(xls_refmeas_data['RefMeas_Modified_residue_donor_name'][i])) and \
+                        (('RefMeas_Modified_residue_donor_smiles' in xls_refmeas_data.keys()
+                         and not pandas.isnull(xls_refmeas_data['RefMeas_Modified_residue_donor_smiles'][i]))
+                        or ('RefMeas_Modified_residue_donor_smiles_canonical' in xls_refmeas_data.keys()
+                            and not pandas.isnull(xls_refmeas_data['RefMeas_Modified_residue_donor_smiles_canonical'][i]))
+                        or ('RefMeas_Modified_residue_donor_inchi' in xls_refmeas_data.keys()
+                            and not pandas.isnull(xls_refmeas_data['RefMeas_Modified_residue_donor_inchi'][i]))
+                        or ('RefMeas_Modified_residue_donor_inchi_key' in xls_refmeas_data.keys()
+                            and not pandas.isnull(xls_refmeas_data['RefMeas_Modified_residue_donor_inchi_key'][i]))):
+                    cur_modified_residue_donor_chemical_descriptor = ihm.ChemDescriptor(
+                        auth_name=xls_refmeas_data['RefMeas_Modified_residue_donor_name'][i],
+                        chem_comp_id=None if (
+                                'RefMeas_Modified_residue_donor_chem_comp_id' not in xls_refmeas_data.keys()
+                                or pandas.isnull(xls_refmeas_data['RefMeas_Modified_residue_donor_chem_comp_id'][i]))
+                                    else xls_refmeas_data['RefMeas_Modified_residue_donor_chem_comp_id'][i],
+                        chemical_name=None if (
+                                'RefMeas_Modified_residue_donor_chemical_name' not in xls_refmeas_data.keys()
+                                or pandas.isnull(xls_refmeas_data['RefMeas_Modified_residue_donor_chemical_name'][i]))
+                                    else xls_refmeas_data['RefMeas_Modified_residue_donor_chemical_name'][i],
+                        common_name=None if (
+                                'RefMeas_Modified_residue_donor_common_name' not in xls_refmeas_data.keys()
+                                or pandas.isnull(xls_refmeas_data['RefMeas_Modified_residue_donor_common_name'][i]))
+                                    else xls_refmeas_data['RefMeas_Modified_residue_donor_common_name'][i],
+                        smiles=None if (
+                                'RefMeas_Modified_residue_donor_smiles' not in xls_refmeas_data.keys()
+                                or pandas.isnull(xls_refmeas_data['RefMeas_Modified_residue_donor_smiles'][i]))
+                                    else xls_refmeas_data['RefMeas_Modified_residue_donor_smiles'][i],
+                        smiles_canonical=None if (
+                                'RefMeas_Modified_residue_donor_smiles_canonical' not in xls_refmeas_data.keys()
+                                or pandas.isnull(xls_refmeas_data['RefMeas_Modified_residue_donor_smiles_canonical'][i]))
+                                    else xls_refmeas_data['RefMeas_Modified_residue_donor_smiles_canonical'][i],
+                        inchi=None if (
+                                'RefMeas_Modified_residue_donor_inchi' not in xls_refmeas_data.keys()
+                                or pandas.isnull(xls_refmeas_data['RefMeas_Modified_residue_donor_inchi'][i]))
+                                    else xls_refmeas_data['RefMeas_Modified_residue_donor_inchi'][i],
+                        inchi_key=None if (
+                                'RefMeas_Modified_residue_donor_inchi_key' not in xls_refmeas_data.keys()
+                                or pandas.isnull(xls_refmeas_data['RefMeas_Modified_residue_donor_inchi_key'][i]))
+                                    else xls_refmeas_data['RefMeas_Modified_residue_donor_inchi_key'][i])
+
+                    if not occurs_in_list(cur_modified_residue_donor_chemical_descriptor, list_chemical_descriptors):
+                        list_chemical_descriptors.append(cur_modified_residue_donor_chemical_descriptor)
+                    else:
+                        cur_modified_residue_donor_chemical_descriptor = [
+                            x for x in list_chemical_descriptors
+                            if x.__dict__ == cur_modified_residue_donor_chemical_descriptor.__dict__][0]
+
+                    cur_modified_residue_donor_index = -1
+                    if not occurs_in_list(cur_modified_residue_donor_chemical_descriptor, list_modified_residues):
+                        list_modified_residues.append(cur_modified_residue_donor_chemical_descriptor)
+                    cur_modified_residue_donor_index = list_modified_residues.index(
+                        cur_modified_residue_donor_chemical_descriptor)
+                    list_of_object_indices_refmeas[i]['Modified_residue_donor'] = cur_modified_residue_donor_index
+
+        ## acceptor
+        for i in range(nr_of_entries_refmeas):
+            if list_ref_measurement_contains_acceptor_info[i]:
+                if ('RefMeas_Modified_residue_acceptor_name' in xls_refmeas_data.keys()
+                    and not pandas.isnull(xls_refmeas_data['RefMeas_Modified_residue_acceptor_name'][i])) and \
+                        (('RefMeas_Modified_residue_acceptor_smiles' in xls_refmeas_data.keys()
+                         and not pandas.isnull(xls_refmeas_data['RefMeas_Modified_residue_acceptor_smiles'][i]))
+                        or ('RefMeas_Modified_residue_acceptor_smiles_canonical' in xls_refmeas_data.keys()
+                            and not pandas.isnull(xls_refmeas_data['RefMeas_Modified_residue_acceptor_smiles_canonical'][i]))
+                        or ('RefMeas_Modified_residue_acceptor_inchi' in xls_refmeas_data.keys()
+                            and not pandas.isnull(xls_refmeas_data['RefMeas_Modified_residue_acceptor_inchi'][i]))
+                        or ('RefMeas_Modified_residue_acceptor_inchi_key' in xls_refmeas_data.keys()
+                            and not pandas.isnull(xls_refmeas_data['RefMeas_Modified_residue_acceptor_inchi_key'][i]))):
+                    cur_modified_residue_acceptor_chemical_descriptor = ihm.ChemDescriptor(
+                        auth_name=xls_refmeas_data['RefMeas_Modified_residue_acceptor_name'][i],
+                        chem_comp_id=None if (
+                                'RefMeas_Modified_residue_acceptor_chem_comp_id' not in xls_refmeas_data.keys()
+                                or pandas.isnull(xls_refmeas_data['RefMeas_Modified_residue_acceptor_chem_comp_id'][i]))
+                                    else xls_refmeas_data['RefMeas_Modified_residue_acceptor_chem_comp_id'][i],
+                        chemical_name=None if (
+                                'RefMeas_Modified_residue_acceptor_chemical_name' not in xls_refmeas_data.keys()
+                                or pandas.isnull(xls_refmeas_data['RefMeas_Modified_residue_acceptor_chemical_name'][i]))
+                                    else xls_refmeas_data['RefMeas_Modified_residue_acceptor_chemical_name'][i],
+                        common_name=None if (
+                                'RefMeas_Modified_residue_acceptor_common_name' not in xls_refmeas_data.keys()
+                                or pandas.isnull(xls_refmeas_data['RefMeas_Modified_residue_acceptor_common_name'][i]))
+                                    else xls_refmeas_data['RefMeas_Modified_residue_acceptor_common_name'][i],
+                        smiles=None if (
+                                'RefMeas_Modified_residue_acceptor_smiles' not in xls_refmeas_data.keys()
+                                or pandas.isnull(xls_refmeas_data['RefMeas_Modified_residue_acceptor_smiles'][i]))
+                                    else xls_refmeas_data['RefMeas_Modified_residue_acceptor_smiles'][i],
+                        smiles_canonical=None if (
+                                'RefMeas_Modified_residue_acceptor_smiles_canonical' not in xls_refmeas_data.keys()
+                                or pandas.isnull(xls_refmeas_data['RefMeas_Modified_residue_acceptor_smiles_canonical'][i]))
+                                    else xls_refmeas_data['RefMeas_Modified_residue_acceptor_smiles_canonical'][i],
+                        inchi=None if (
+                                'RefMeas_Modified_residue_acceptor_inchi' not in xls_refmeas_data.keys()
+                                or pandas.isnull(xls_refmeas_data['RefMeas_Modified_residue_acceptor_inchi'][i]))
+                                    else xls_refmeas_data['RefMeas_Modified_residue_acceptor_inchi'][i],
+                        inchi_key=None if (
+                                'RefMeas_Modified_residue_acceptor_inchi_key' not in xls_refmeas_data.keys()
+                                or pandas.isnull(xls_refmeas_data['RefMeas_Modified_residue_acceptor_inchi_key'][i]))
+                                    else xls_refmeas_data['RefMeas_Modified_residue_acceptor_inchi_key'][i])
+
+                    if not occurs_in_list(cur_modified_residue_acceptor_chemical_descriptor, list_chemical_descriptors):
+                        list_chemical_descriptors.append(cur_modified_residue_acceptor_chemical_descriptor)
+                    else:
+                        cur_modified_residue_acceptor_chemical_descriptor = [
+                            x for x in list_chemical_descriptors if
+                            x.__dict__ == cur_modified_residue_acceptor_chemical_descriptor.__dict__][0]
+
+                    cur_modified_residue_acceptor_index = -1
+                    if not occurs_in_list(cur_modified_residue_acceptor_chemical_descriptor, list_modified_residues):
+                        list_modified_residues.append(cur_modified_residue_acceptor_chemical_descriptor)
+                    cur_modified_residue_acceptor_index = list_modified_residues.index(
+                        cur_modified_residue_acceptor_chemical_descriptor)
+                    list_of_object_indices_refmeas[i]['Modified_residue_acceptor'] = cur_modified_residue_acceptor_index
+
+        #### Mutated residues
+        for i in range(nr_of_entries_refmeas):
+            if list_ref_measurement_contains_donor_info[i]:
+                if ('RefMeas_Mutated_residue_donor_name' in xls_refmeas_data.keys()
+                    and not pandas.isnull(xls_refmeas_data['RefMeas_Mutated_residue_donor_name'][i])) and \
+                        (('RefMeas_Mutated_residue_donor_smiles' in xls_refmeas_data.keys()
+                         and not pandas.isnull(xls_refmeas_data['RefMeas_Mutated_residue_donor_smiles'][i]))
+                        or ('RefMeas_Mutated_residue_donor_smiles_canonical' in xls_refmeas_data.keys()
+                            and not pandas.isnull(xls_refmeas_data['RefMeas_Mutated_residue_donor_smiles_canonical'][i]))
+                        or ('RefMeas_Mutated_residue_donor_inchi' in xls_refmeas_data.keys()
+                            and not pandas.isnull(xls_refmeas_data['RefMeas_Modified_residue_donor_inchi'][i]))
+                        or ('RefMeas_Mutated_residue_donor_inchi_key' in xls_refmeas_data.keys()
+                            and not pandas.isnull(xls_refmeas_data['RefMeas_Modified_residue_donor_inchi_key'][i]))):
+                    cur_mutated_residue_donor_chemical_descriptor = ihm.ChemDescriptor(
+                        auth_name=xls_refmeas_data['RefMeas_Mutated_residue_donor_name'][i],
+                        chem_comp_id=None if (
+                                'RefMeas_Mutated_residue_donor_chem_comp_id' not in xls_refmeas_data.keys()
+                                or pandas.isnull(xls_refmeas_data['RefMeas_Mutated_residue_donor_chem_comp_id'][i]))
+                                    else xls_refmeas_data['RefMeas_Mutated_residue_donor_chem_comp_id'][i],
+                        chemical_name=None if (
+                                'RefMeas_Mutated_residue_donor_chemical_name' not in xls_refmeas_data.keys()
+                                or pandas.isnull(xls_refmeas_data['RefMeas_Mutated_residue_donor_chemical_name'][i]))
+                                    else xls_refmeas_data['RefMeas_Mutated_residue_donor_chemical_name'][i],
+                        common_name=None if (
+                                'RefMeas_Mutated_residue_donor_common_name' not in xls_refmeas_data.keys()
+                                or pandas.isnull(xls_refmeas_data['RefMeas_Mutated_residue_donor_common_name'][i]))
+                                    else xls_refmeas_data['RefMeas_Mutated_residue_donor_common_name'][i],
+                        smiles=None if (
+                                'RefMeas_Mutated_residue_donor_smiles' not in xls_refmeas_data.keys()
+                                or pandas.isnull(xls_refmeas_data['RefMeas_Mutated_residue_donor_smiles'][i]))
+                                    else xls_refmeas_data['RefMeas_Mutated_residue_donor_smiles'][i],
+                        smiles_canonical=None if (
+                                'RefMeas_Mutated_residue_donor_smiles_canonical' not in xls_refmeas_data.keys()
+                                or pandas.isnull(xls_refmeas_data['RefMeas_Mutated_residue_donor_smiles_canonical'][i]))
+                                    else xls_refmeas_data['RefMeas_Mutated_residue_donor_smiles_canonical'][i],
+                        inchi=None if (
+                                'RefMeas_Mutated_residue_donor_inchi' not in xls_refmeas_data.keys()
+                                or pandas.isnull(xls_refmeas_data['RefMeas_Mutated_residue_donor_inchi'][i]))
+                                    else xls_refmeas_data['RefMeas_Mutated_residue_donor_inchi'][i],
+                        inchi_key=None if (
+                                'RefMeas_Mutated_residue_donor_inchi_key' not in xls_refmeas_data.keys()
+                                or pandas.isnull(xls_refmeas_data['RefMeas_Mutated_residue_donor_inchi_key'][i]))
+                                    else xls_refmeas_data['RefMeas_Mutated_residue_donor_inchi_key'][i])
+
+                    if not occurs_in_list(cur_mutated_residue_donor_chemical_descriptor, list_chemical_descriptors):
+                        list_chemical_descriptors.append(cur_mutated_residue_donor_chemical_descriptor)
+                    else:
+                        cur_mutated_residue_donor_chemical_descriptor = [
+                            x for x in list_chemical_descriptors if
+                            x.__dict__ == cur_mutated_residue_donor_chemical_descriptor.__dict__][0]
+
+                    cur_mutated_residue_donor_index = -1
+                    if not occurs_in_list(cur_mutated_residue_donor_chemical_descriptor, list_mutated_residues):
+                        list_mutated_residues.append(cur_mutated_residue_donor_chemical_descriptor)
+                    cur_mutated_residue_donor_index = list_mutated_residues.index(
+                        cur_mutated_residue_donor_chemical_descriptor)
+                    list_of_object_indices_refmeas[i]['Mutated_residue_donor'] = cur_mutated_residue_donor_index
+
+        ## acceptor
+        for i in range(nr_of_entries_refmeas):
+            if list_ref_measurement_contains_acceptor_info[i]:
+                if ('RefMeas_Mutated_residue_acceptor_name' in xls_refmeas_data.keys()
+                    and not pandas.isnull(xls_refmeas_data['RefMeas_Mutated_residue_acceptor_name'][i])) and \
+                        (('RefMeas_Mutated_residue_acceptor_smiles' in xls_refmeas_data.keys()
+                         and not pandas.isnull(xls_refmeas_data['RefMeas_Mutated_residue_acceptor_smiles'][i]))
+                        or ('RefMeas_Mutated_residue_acceptor_smiles_canonical' in xls_refmeas_data.keys()
+                            and not pandas.isnull(xls_refmeas_data['RefMeas_Mutated_residue_acceptor_smiles_canonical'][i]))
+                        or ('RefMeas_Mutated_residue_acceptor_inchi' in xls_refmeas_data.keys()
+                            and not pandas.isnull(xls_refmeas_data['RefMeas_Mutated_residue_acceptor_inchi'][i]))
+                        or ('RefMeas_Mutated_residue_acceptor_inchi_key' in xls_refmas_data.keys()
+                            and not pandas.isnull(xls_refmeas_data['RefMeas_Mutated_residue_acceptor_inchi_key'][i]))):
+                    cur_mutated_residue_acceptor_chemical_descriptor = ihm.ChemDescriptor(
+                        auth_name=xls_refmeas_data['RefMeas_Mutated_residue_acceptor_name'][i],
+                        chem_comp_id=None if (
+                                'RefMeas_Mutated_residue_acceptor_chem_comp_id' not in xls_refmeas_data.keys()
+                                or pandas.isnull(xls_refmeas_data['RefMeas_Mutated_residue_acceptor_chem_comp_id'][i]))
+                                    else xls_refmeas_data['RefMeas_Mutated_residue_acceptor_chem_comp_id'][i],
+                        chemical_name=None if (
+                                'RefMeas_Mutated_residue_acceptor_chemical_name' not in xls_refmeas_data.keys()
+                                or pandas.isnull(xls_refmeas_data['RefMeas_Mutated_residue_acceptor_chemical_name'][i]))
+                                    else xls_refmeas_data['RefMeas_Mutated_residue_acceptor_chemical_name'][i],
+                        common_name=None if (
+                                'RefMeas_Mutated_residue_acceptor_common_name' not in xls_refmeas_data.keys()
+                                or pandas.isnull(xls_refmeas_data['RefMeas_Mutated_residue_acceptor_common_name'][i]))
+                                    else xls_refmeas_data['RefMeas_Mutated_residue_acceptor_common_name'][i],
+                        smiles=None if (
+                                'RefMeas_Mutated_residue_acceptor_smiles' not in xls_refmeas_data.keys()
+                                or pandas.isnull(xls_refmeas_data['RefMeas_Mutated_residue_acceptor_smiles'][i]))
+                                    else xls_refmeas_data['RefMeas_Mutated_residue_acceptor_smiles'][i],
+                        smiles_canonical=None if (
+                                'RefMeas_Mutated_residue_acceptor_smiles_canonical' not in xls_refmeas_data.keys()
+                                or pandas.isnull(xls_refmeas_data['RefMeas_Mutated_residue_acceptor_smiles_canonical'][i]))
+                                    else xls_refmeas_data['RefMeas_Mutated_residue_acceptor_smiles_canonical'][i],
+                        inchi=None if (
+                                'RefMeas_Mutated_residue_acceptor_inchi' not in xls_refmeas_data.keys()
+                                or pandas.isnull(xls_refmeas_data['RefMeas_Mutated_residue_acceptor_inchi'][i]))
+                                    else xls_refmeas_data['RefMeas_Mutated_residue_acceptor_inchi'][i],
+                        inchi_key=None if (
+                                'RefMeas_Mutated_residue_acceptor_inchi_key' not in xls_refmeas_data.keys()
+                                or pandas.isnull(xls_refmeas_data['RefMeas_Mutated_residue_acceptor_inchi_key'][i]))
+                                    else xls_refmeas_data['RefMeas_Mutated_residue_acceptor_inchi_key'][i])
+                    if not occurs_in_list(cur_mutated_residue_acceptor_chemical_descriptor, list_chemical_descriptors):
+                        list_chemical_descriptors.append(cur_mutated_residue_acceptor_chemical_descriptor)
+                    else:
+                        cur_mutated_residue_acceptor_chemical_descriptor = [
+                            x for x in list_chemical_descriptors if
+                            x.__dict__ == cur_mutated_residue_acceptor_chemical_descriptor.__dict__][0]
+
+                    cur_mutated_residue_acceptor_index = -1
+                    if not occurs_in_list(cur_mutated_residue_acceptor_chemical_descriptor, list_mutated_residues):
+                        list_mutated_residues.append(cur_mutated_residue_acceptor_chemical_descriptor)
+                    cur_mutated_residue_acceptor_index = list_mutated_residues.index(
+                        cur_mutated_residue_acceptor_chemical_descriptor)
+                    list_of_object_indices_refmeas[i]['Mutated_residue_acceptor'] = cur_mutated_residue_acceptor_index
+
+        ###### Poly_probe_position
+        for i in range(nr_of_entries_refmeas):
+            if list_ref_measurement_contains_donor_info[i]:
+                cur_poly_probe_position_auth_name = None if (
+                            'RefMeas_Poly_probe_position_donor_name' not in xls_refmeas_data.keys() or pandas.isnull(
+                        xls_refmeas_data['RefMeas_Poly_probe_position_donor_name'][i])) else \
+                xls_refmeas_data['RefMeas_Poly_probe_position_donor_name'][i]
+                cur_poly_probe_position_entity = xls_refmeas_data['RefMeas_Poly_probe_position_donor_entity'][i]
+                cur_poly_probe_position_seq_id = int(xls_refmeas_data['RefMeas_Poly_probe_position_donor_seq_id'][i])
+                cur_poly_probe_position_comp_id = xls_refmeas_data['RefMeas_Poly_probe_position_donor_comp_id'][i]
+                cur_poly_probe_position_atom_id = None if (
+                        'RefMeas_Poly_probe_position_donor_atom_id' not in xls_refmeas_data.keys()
+                        or pandas.isnull(xls_refmeas_data['RefMeas_Poly_probe_position_donor_atom_id'][i])) else \
+                    xls_refmeas_data['RefMeas_Poly_probe_position_donor_atom_id'][i]
+                cur_poly_probe_position_mutation_flag = False if (
+                        'RefMeas_Poly_probe_position_donor_mutation_flag' not in xls_refmeas_data.keys()
+                        or xls_refmeas_data['RefMeas_Poly_probe_position_donor_mutation_flag'][i] in
+                        ['False', 'no', 'No','NO']) else True
+                cur_poly_probe_position_modification_flag = False if (
+                        'RefMeas_Poly_probe_position_donor_modification_flag' not in xls_refmeas_data.keys()
+                        or xls_refmeas_data['RefMeas_Poly_probe_position_donor_modification_flag'][i] in
+                        ['False', 'no', 'No','NO']) else True
+
+                ## Create the Residue or atom
+                cur_resatom_new = None
+                cur_entity = list_ihm_entities[list_ihm_entity_ids.index(cur_poly_probe_position_entity)]
+                ## First create the residue
+                cur_residue = cur_entity.residue(seq_id=cur_poly_probe_position_seq_id)
+
+                if cur_poly_probe_position_atom_id is not None:
+                    cur_atom = cur_residue.atom(atom_id=cur_poly_probe_position_atom_id)
+                    cur_resatom_new = cur_atom
+                else:
+                    cur_resatom_new = cur_residue
+                ## add it to the list of resatoms if it is not there yet
+                if get_resatom_from_list(cur_resatom_new, list_resatoms) is None:
+                    list_resatoms.append(cur_resatom_new)
+                ## and get the respective entry (to avoid duplicate entries)
+                cur_resatom = get_resatom_from_list(cur_resatom_new, list_resatoms)
+
+                cur_poly_probe_position = ihm.flr.PolyProbePosition(
+                        resatom=cur_resatom,
+                        mutation_flag=cur_poly_probe_position_mutation_flag,
+                        modification_flag=cur_poly_probe_position_modification_flag,
+                        auth_name=cur_poly_probe_position_auth_name,
+                        mutated_chem_descriptor=None if (('Mutated_residue_donor' not in list_of_object_indices_refmeas[i].keys())
+                                                        or cur_poly_probe_position_mutation_flag == False)
+                                                else list_mutated_residues[list_of_object_indices_refmeas[i]['Mutated_residue_donor']],
+                        modified_chem_descriptor=None if (('Modified_residue_donor' not in list_of_object_indices_refmeas[i].keys())
+                                                          or cur_poly_probe_position_modification_flag == False)
+                                                else list_modified_residues[list_of_object_indices_refmeas[i]['Modified_residue_donor']])
+
+                cur_poly_probe_position_index = -1
+                if not occurs_in_list(cur_poly_probe_position, list_poly_probe_positions):
+                    list_poly_probe_positions.append(cur_poly_probe_position)
+                cur_poly_probe_position_index = list_poly_probe_positions.index(cur_poly_probe_position)
+                list_of_object_indices_refmeas[i]['Poly_probe_position_donor'] = cur_poly_probe_position_index
+
+        for i in range(nr_of_entries_refmeas):
+            if list_ref_measurement_contains_acceptor_info[i]:
+                cur_poly_probe_position_auth_name = None if (
+                            'RefMeas_Poly_probe_position_acceptor_name' not in xls_refmeas_data.keys() or pandas.isnull(
+                        xls_refmeas_data['RefMeas_Poly_probe_position_acceptor_name'][i])) else \
+                xls_refmeas_data['RefMeas_Poly_probe_position_acceptor_name'][i]
+                cur_poly_probe_position_entity = xls_refmeas_data['RefMeas_Poly_probe_position_acceptor_entity'][i]
+                cur_poly_probe_position_seq_id = int(xls_refmeas_data['RefMeas_Poly_probe_position_acceptor_seq_id'][i])
+                cur_poly_probe_position_comp_id = xls_refmeas_data['RefMeas_Poly_probe_position_acceptor_comp_id'][i]
+                cur_poly_probe_position_atom_id = None if (
+                            'RefMeas_Poly_probe_position_acceptor_atom_id' not in xls_refmeas_data.keys() or pandas.isnull(
+                        xls_refmeas_data['RefMeas_Poly_probe_position_acceptor_atom_id'][i])) else \
+                xls_refmeas_data['RefMeas_Poly_probe_position_acceptor_atom_id'][i]
+                cur_poly_probe_position_mutation_flag = False if (
+                            'RefMeas_Poly_probe_position_acceptor_mutation_flag' not in xls_refmeas_data.keys()
+                            or xls_refmeas_data['RefMeas_Poly_probe_position_acceptor_mutation_flag'][i] in
+                            ['False', 'no', 'No','NO']) else True
+                cur_poly_probe_position_modification_flag = False if (
+                            'RefMeas_Poly_probe_position_acceptor_modification_flag' not in xls_refmeas_data.keys()
+                            or xls_refmeas_data['RefMeas_Poly_probe_position_acceptor_modification_flag'][i] in
+                            ['False', 'no', 'No','NO']) else True
+
+                ## Create the Residue or atom
+                cur_resatom_new = None
+                cur_entity = list_ihm_entities[list_ihm_entity_ids.index(cur_poly_probe_position_entity)]
+                ## First create the residue
+                cur_residue = cur_entity.residue(seq_id=cur_poly_probe_position_seq_id)
+
+                if cur_poly_probe_position_atom_id is not None:
+                    cur_atom = cur_residue.atom(atom_id=cur_poly_probe_position_atom_id)
+                    cur_resatom_new = cur_atom
+                else:
+                    cur_resatom_new = cur_residue
+                ## add it to the list of resatoms if it is not there yet
+                if get_resatom_from_list(cur_resatom_new, list_resatoms) is None:
+                    list_resatoms.append(cur_resatom_new)
+                ## and get the respective entry (to avoid duplicate entries)
+                cur_resatom = get_resatom_from_list(cur_resatom_new, list_resatoms)
+
+                cur_poly_probe_position = ihm.flr.PolyProbePosition(
+                    resatom=cur_resatom,
+                    mutation_flag=cur_poly_probe_position_mutation_flag,
+                    modification_flag=cur_poly_probe_position_modification_flag,
+                    auth_name=cur_poly_probe_position_auth_name,
+                    mutated_chem_descriptor=None if
+                        (('Mutated_residue_acceptor' not in list_of_object_indices_refmeas[i].keys())
+                            or cur_poly_probe_position_mutation_flag == False) else
+                                list_mutated_residues[list_of_object_indices_refmeas[i]['Mutated_residue_acceptor']],
+                    modified_chem_descriptor=None if (('Modified_residue_acceptor' not in list_of_object_indices_refmeas[i].keys())
+                                                    or cur_poly_probe_position_modification_flag == False) else
+                                list_modified_residues[list_of_object_indices_refmeas[i]['Modified_residue_acceptor']])
+
+                cur_poly_probe_position_index = -1
+                if not occurs_in_list(cur_poly_probe_position, list_poly_probe_positions):
+                    list_poly_probe_positions.append(cur_poly_probe_position)
+                cur_poly_probe_position_index = list_poly_probe_positions.index(cur_poly_probe_position)
+                list_of_object_indices_refmeas[i]['Poly_probe_position_acceptor'] = cur_poly_probe_position_index
+
+        ###### Sample_probe_details
+        ## donor
+        for i in range(nr_of_entries_refmeas):
+            if list_ref_measurement_contains_donor_info[i]:
+                cur_sample_probe_details_donor_description = None if (
+                            'RefMeas_Sample_probe_details_donor_description' not in xls_refmeas_data.keys()
+                            or pandas.isnull(xls_refmeas_data['RefMeas_Sample_probe_details_donor_description'][i])) else \
+                                xls_refmeas_data['RefMeas_Sample_probe_details_donor_description'][i]
+                cur_sample_probe_details = ihm.flr.SampleProbeDetails(
+                    sample=list_samples[list_of_object_indices_refmeas[i]['Sample']],
+                    probe=list_probe_donors[list_of_object_indices_refmeas[i]['Probe_donor']],
+                    fluorophore_type='donor',
+                    poly_probe_position=list_poly_probe_positions[list_of_object_indices_refmeas[i]['Poly_probe_position_donor']],
+                    description=cur_sample_probe_details_donor_description)
+                cur_sample_probe_details_index = -1
+                if cur_sample_probe_details not in list_sample_probe_details:
+                    list_sample_probe_details.append(cur_sample_probe_details)
+                cur_sample_probe_details_index = list_sample_probe_details.index(cur_sample_probe_details)
+                list_of_object_indices_refmeas[i]['Sample_probe_details_donor'] = cur_sample_probe_details_index
+
+        ## acceptor
+        for i in range(nr_of_entries_refmeas):
+            if list_ref_measurement_contains_acceptor_info[i]:
+                cur_sample_probe_details_acceptor_description = None if (
+                            'RefMeas_Sample_probe_details_acceptor_description' not in xls_refmeas_data.keys()
+                            or pandas.isnull(xls_refmeas_data['RefMeas_Sample_probe_details_acceptor_description'][i])) else \
+                                xls_refmeas_data['RefMeas_Sample_probe_details_acceptor_description'][i]
+                cur_sample_probe_details = ihm.flr.SampleProbeDetails(
+                    sample=list_samples[list_of_object_indices_refmeas[i]['Sample']],
+                    probe=list_probe_acceptors[list_of_object_indices_refmeas[i]['Probe_acceptor']],
+                    fluorophore_type='acceptor',
+                    poly_probe_position=list_poly_probe_positions[
+                        list_of_object_indices_refmeas[i]['Poly_probe_position_acceptor']],
+                    description=cur_sample_probe_details_acceptor_description)
+                cur_sample_probe_details_index = -1
+                if cur_sample_probe_details not in list_sample_probe_details:
+                    list_sample_probe_details.append(cur_sample_probe_details)
+                cur_sample_probe_details_index = list_sample_probe_details.index(cur_sample_probe_details)
+                list_of_object_indices_refmeas[i]['Sample_probe_details_acceptor'] = cur_sample_probe_details_index
+
+        ###### Probe_descriptor_conjugate
+        for i in range(nr_of_entries_refmeas):
+            if list_ref_measurement_contains_donor_info[i]:
+                cur_probe_conjugate_descriptor_donor = ihm.ChemDescriptor(
+                    auth_name=xls_refmeas_data['RefMeas_Probe_conjugate_donor_name'][i],
+                    chem_comp_id=None if (
+                            'RefMeas_Probe_conjugate_donor_chem_comp_id' not in xls_refmeas_data.keys()
+                            or pandas.isnull(xls_refmeas_data['RefMeas_Probe_conjugate_donor_chem_comp_id'][i])) else
+                                xls_refmeas_data['RefMeas_Probe_conjugate_donor_chem_comp_id'][i],
+                    chemical_name=None if (
+                            'RefMeas_Probe_conjugate_donor_chemical_name' not in xls_refmeas_data.keys()
+                            or pandas.isnull(xls_refmeas_data['RefMeas_Probe_conjugate_donor_chemical_name'][i])) else
+                                xls_refmeas_data['RefMeas_Probe_conjugate_donor_chemical_name'][i],
+                    common_name=None if (
+                            'RefMeas_Probe_conjugate_donor_common_name' not in xls_refmeas_data.keys()
+                            or pandas.isnull(xls_refmeas_data['RefMeas_Probe_conjugate_donor_common_name'][i])) else
+                                xls_refmeas_data['RefMeas_Probe_conjugate_donor_common_name'][i],
+                    smiles=None if (
+                            'RefMeas_Probe_conjugate_donor_smiles' not in xls_refmeas_data.keys()
+                            or pandas.isnull(xls_refmeas_data['RefMeas_Probe_conjugate_donor_smiles'][i])) else
+                                xls_refmeas_data['RefMeas_Probe_conjugate_donor_smiles'][i],
+                    smiles_canonical=None if (
+                            'RefMeas_Probe_conjugate_donor_smiles_canonical' not in xls_refmeas_data.keys()
+                            or pandas.isnull(xls_refmeas_data['RefMeas_Probe_conjugate_donor_smiles_canonical'][i])) else
+                                xls_refmeas_data['RefMeas_Probe_conjugate_donor_smiles_canonical'][i],
+                    inchi=None if ('RefMeas_Probe_conjugate_donor_inchi' not in xls_refmeas_data.keys()
+                                   or pandas.isnull(xls_refmeas_data['RefMeas_Probe_conjugate_donor_inchi'][i])) else
+                                xls_refmeas_data['RefMeas_Probe_conjugate_donor_inchi'][i],
+                    inchi_key=None if (
+                            'RefMeas_Probe_conjugate_donor_inchi_key' not in xls_refmeas_data.keys()
+                            or pandas.isnull(xls_refmeas_data['RefMeas_Probe_conjugate_donor_inchi_key'][i])) else
+                                xls_refmeas_data['RefMeas_Probe_conjugate_donor_inchi_key'][i])
+
+                if not occurs_in_list(cur_probe_conjugate_descriptor_donor, list_chemical_descriptors):
+                    list_chemical_descriptors.append(cur_probe_conjugate_descriptor_donor)
+                else:
+                    cur_probe_conjugate_descriptor_donor = \
+                    [x for x in list_chemical_descriptors if x.__dict__ == cur_probe_conjugate_descriptor_donor.__dict__][0]
+
+                cur_probe_conjugate_descriptor_donor_index = -1
+                if not occurs_in_list(cur_probe_conjugate_descriptor_donor, list_probe_conjugate_descriptors):
+                    list_probe_conjugate_descriptors.append(cur_probe_conjugate_descriptor_donor)
+                cur_probe_conjugate_descriptor_donor_index = list_probe_conjugate_descriptors.index(
+                    cur_probe_conjugate_descriptor_donor)
+                list_of_object_indices_refmeas[i]['Probe_conjugate_descriptor_donor'] = cur_probe_conjugate_descriptor_donor_index
+
+        ## Acceptor
+        for i in range(nr_of_entries_refmeas):
+            if list_ref_measurement_contains_acceptor_info[i]:
+                cur_probe_conjugate_descriptor_acceptor = ihm.ChemDescriptor(
+                    auth_name=xls_refmeas_data['RefMeas_Probe_conjugate_acceptor_name'][i],
+                    chem_comp_id=None if (
+                            'RefMeas_Probe_conjugate_acceptor_chem_comp_id' not in xls_refmeas_data.keys()
+                            or pandas.isnull(xls_refmeas_data['RefMeas_Probe_conjugate_acceptor_chem_comp_id'][i])) else
+                                xls_refmeas_data['RefMeas_Probe_conjugate_acceptor_chem_comp_id'][i],
+                    chemical_name=None if (
+                            'RefMeas_Probe_conjugate_acceptor_chemical_name' not in xls_refmeas_data.keys()
+                            or pandas.isnull(xls_refmeas_data['RefMeas_Probe_conjugate_acceptor_chemical_name'][i]))
+                                else xls_refmeas_data['RefMeas_Probe_conjugate_acceptor_chemical_name'][i],
+                    common_name=None if (
+                            'RefMeas_Probe_conjugate_acceptor_common_name' not in xls_refmeas_data.keys()
+                            or pandas.isnull(xls_refmeas_data['RefMeas_Probe_conjugate_acceptor_common_name'][i]))
+                                else xls_refmeas_data['RefMeas_Probe_conjugate_acceptor_common_name'][i],
+                    smiles=None if ('RefMeas_Probe_conjugate_acceptor_smiles' not in xls_refmeas_data.keys()
+                                    or pandas.isnull(xls_refmeas_data['RefMeas_Probe_conjugate_acceptor_smiles'][i]))
+                                else xls_refmeas_data['RefMeas_Probe_conjugate_acceptor_smiles'][i],
+                    smiles_canonical=None if (
+                            'RefMeas_Probe_conjugate_acceptor_smiles_canonical' not in xls_refmeas_data.keys()
+                            or pandas.isnull(xls_refmeas_data['RefMeas_Probe_conjugate_acceptor_smiles_canonical'][i]))
+                                else xls_refmeas_data['RefMeas_Probe_conjugate_acceptor_smiles_canonical'][i],
+                    inchi=None if ('RefMeas_Probe_conjugate_acceptor_inchi' not in xls_refmeas_data.keys()
+                                   or pandas.isnull(xls_refmeas_data['RefMeas_Probe_conjugate_acceptor_inchi'][i]))
+                                else xls_refmeas_data['RefMeas_Probe_conjugate_acceptor_inchi'][i],
+                    inchi_key=None if ('RefMeas_Probe_conjugate_acceptor_inchi_key' not in xls_refmeas_data.keys()
+                                       or pandas.isnull(xls_refmeas_data['RefMeas_Probe_conjugate_acceptor_inchi_key'][i]))
+                                else xls_refmeas_data['RefMeas_Probe_conjugate_acceptor_inchi_key'][i])
+
+                if not occurs_in_list(cur_probe_conjugate_descriptor_acceptor, list_chemical_descriptors):
+                    list_chemical_descriptors.append(cur_probe_conjugate_descriptor_acceptor)
+                else:
+                    cur_probe_conjugate_descriptor_acceptor = [
+                        x for x in list_chemical_descriptors
+                        if x.__dict__ == cur_probe_conjugate_descriptor_acceptor.__dict__][0]
+
+                cur_probe_conjugate_descriptor_acceptor_index = -1
+                if not occurs_in_list(cur_probe_conjugate_descriptor_acceptor, list_probe_conjugate_descriptors):
+                    list_probe_conjugate_descriptors.append(cur_probe_conjugate_descriptor_acceptor)
+                cur_probe_conjugate_descriptor_acceptor_index = list_probe_conjugate_descriptors.index(
+                    cur_probe_conjugate_descriptor_acceptor)
+                list_of_object_indices_refmeas[i][
+                    'Probe_conjugate_descriptor_acceptor'] = cur_probe_conjugate_descriptor_acceptor_index
+
+        ###### Poly_probe_conjugate
+        for i in range(nr_of_entries_refmeas):
+            if list_ref_measurement_contains_donor_info[i]:
+                cur_poly_probe_conjugate_ambiguous_stoichiometry_donor = False if (
+                            'RefMeas_Probe_conjugate_ambiguous_probe_stoichiometry_donor' not in xls_refmeas_data.keys() or
+                            xls_refmeas_data['RefMeas_Probe_conjugate_ambiguous_probe_stoichiometry_donor'][i] in
+                            ['False', 'no','No','NO']) else True
+                cur_poly_probe_conjugate_probe_stoichiometry_donor = None if (
+                            'RefMeas_Probe_conjugate_probe_stoichiometry_donor' not in xls_refmeas_data.keys()
+                            or pandas.isnull(xls_refmeas_data['RefMeas_Probe_conjugate_probe_stoichiometry_donor'][i])) else \
+                            xls_refmeas_data['RefMeas_Probe_conjugate_probe_stoichiometry_donor'][i]
+                cur_poly_probe_conjugate_donor = ihm.flr.PolyProbeConjugate(
+                    sample_probe=list_sample_probe_details[list_of_object_indices_refmeas[i]['Sample_probe_details_donor']],
+                    chem_descriptor=list_probe_conjugate_descriptors[
+                        list_of_object_indices_refmeas[i]['Probe_conjugate_descriptor_donor']],
+                    ambiguous_stoichiometry=cur_poly_probe_conjugate_ambiguous_stoichiometry_donor,
+                    probe_stoichiometry=cur_poly_probe_conjugate_probe_stoichiometry_donor)
+                cur_poly_probe_conjugate_index = -1
+                if cur_poly_probe_conjugate_donor not in list_poly_probe_conjugates:
+                    list_poly_probe_conjugates.append(cur_poly_probe_conjugate_donor)
+                cur_poly_probe_conjugate_index = list_poly_probe_conjugates.index(cur_poly_probe_conjugate_donor)
+                list_of_object_indices_refmeas[i]['Poly_probe_conjugate_donor'] = cur_poly_probe_conjugate_index
+        ## acceptor
+        for i in range(nr_of_entries_refmeas):
+            if list_ref_measurement_contains_acceptor_info[i]:
+                cur_poly_probe_conjugate_ambiguous_stoichiometry_acceptor = False if (
+                            'RefMeas_Probe_conjugate_ambiguous_probe_stoichiometry_acceptor'
+                            not in xls_refmeas_data.keys()
+                            or xls_refmeas_data['RefMeas_Probe_conjugate_ambiguous_probe_stoichiometry_acceptor'][i]
+                            in ['False', 'no','No','NO']) else True
+                cur_poly_probe_conjugate_probe_stoichiometry_acceptor = None if (
+                            'RefMeas_Probe_conjugate_probe_stoichiometry_acceptor' not in xls_refmeas_data.keys() or pandas.isnull(
+                        xls_refmeas_data['RefMeas_Probe_conjugate_probe_stoichiometry_acceptor'][i])) else \
+                xls_refmeas_data['RefMeas_Probe_conjugate_probe_stoichiometry_acceptor'][i]
+                cur_poly_probe_conjugate_acceptor = ihm.flr.PolyProbeConjugate(
+                    sample_probe=list_sample_probe_details[list_of_object_indices_refmeas[i]['Sample_probe_details_acceptor']],
+                    chem_descriptor=list_probe_conjugate_descriptors[
+                        list_of_object_indices_refmeas[i]['Probe_conjugate_descriptor_acceptor']],
+                    ambiguous_stoichiometry=cur_poly_probe_conjugate_ambiguous_stoichiometry_acceptor,
+                    probe_stoichiometry=cur_poly_probe_conjugate_probe_stoichiometry_acceptor)
+
+                cur_poly_probe_conjugate_index = -1
+                if cur_poly_probe_conjugate_acceptor not in list_poly_probe_conjugates:
+                    list_poly_probe_conjugates.append(cur_poly_probe_conjugate_acceptor)
+                cur_poly_probe_conjugate_index = list_poly_probe_conjugates.index(cur_poly_probe_conjugate_acceptor)
+                list_of_object_indices_refmeas[i]['Poly_probe_conjugate_acceptor'] = cur_poly_probe_conjugate_index
+
+        ###### ReferenceMeasurement
+        tmp_list_for_reference_measurement_groups = {}
+        for i in range(nr_of_entries_refmeas):
+            cur_ref_measurement_id = xls_refmeas_data['RefMeas_ID'][i]
+            cur_ref_measurement_details = None if ('RefMeas_details' not in xls_refmeas_data.keys() or pandas.isnull(xls_refmeas_data['RefMeas_details'][i])) else xls_refmeas_data['RefMeas_details'][i]
+            cur_ref_measurement_group_id = xls_refmeas_data['RefMeas_Group_ID'][i]
+
+            cur_ref_measurement = None
+            ## If donor information is given for the reference measurement
+            if list_ref_measurement_contains_donor_info[i]:
+                ## Get the respective sample_probe_details entry
+                cur_ref_sample_probe = list_sample_probe_details[list_of_object_indices_refmeas[i]['Sample_probe_details_donor']]
+
+                ## Create the RefMeasurement, handle the lifetimes subsequently
+                cur_ref_measurement = ihm.flr.RefMeasurement(ref_sample_probe = cur_ref_sample_probe, details = cur_ref_measurement_details)
+                ## Handle the lifetime lists
+                cur_species_fraction_list = xls_refmeas_data['RefMeas_Lifetime_species_fraction_list'][i]
+                cur_lifetime_list = xls_refmeas_data['RefMeas_Lifetime_lifetime_list'][i]
+                cur_species_names_list = None if ('RefMeas_Lifetime_species_name_list' not in xls_refmeas_data.keys() or pandas.isnull(xls_refmeas_data['RefMeas_Lifetime_species_name_list'][i])) else xls_refmeas_data['RefMeas_Lifetime_species_name_list'][i]
+                ## split the semicolon-separated list
+                all_cur_species_fractions = cur_species_fraction_list.split(";")
+                all_cur_lifetimes = cur_lifetime_list.split(";")
+                all_cur_species_names = [] if cur_species_names_list is None else cur_species_names_list.split(";")
+                if len(all_cur_species_fractions) != len(all_cur_lifetimes):
+                    print('ERROR: Number of species-fractions (%i) and lifetimes (%i) for reference measurement (Tab \'Reference_measurements\' differs.'
+                          %(len(all_cur_species_fractions), len(all_cur_lifetimes)))
+                ## Create new RefMeasurementLifetime objects
+                for tmpj in range(len(all_cur_species_fractions)):
+                    cur_ref_measurement_lifetime = ihm.flr.RefMeasurementLifetime(
+                        species_fraction = float(all_cur_species_fractions[tmpj]),
+                        lifetime = float(all_cur_lifetimes[tmpj]),
+                        species_name =  None if (len(all_cur_species_names) != len(all_cur_species_fractions)) else all_cur_species_names[tmpj])
+                    if cur_ref_measurement_lifetime not in list_ref_measurement_lifetimes:
+                        list_ref_measurement_lifetimes.append(cur_ref_measurement_lifetime)
+                    cur_ref_measurement.add_lifetime(cur_ref_measurement_lifetime)
+
+            ## If acceptor information is given for the reference measurement
+            if list_ref_measurement_contains_acceptor_info[i]:
+                ## Get the respective sample_probe_details entry
+                cur_ref_sample_probe = list_sample_probe_details[list_of_object_indices_refmeas[i]['Sample_probe_details_acceptor']]
+                ## Create the RefMeasurement, handle the lifetimes subsequently
+                cur_ref_measurement = ihm.flr.RefMeasurement(ref_sample_probe=cur_ref_sample_probe,
+                                                             details=cur_ref_measurement_details)
+                ## Handle the lifetime lists
+                cur_species_fraction_list = xls_refmeas_data['RefMeas_Lifetime_species_fraction_list'][i]
+                cur_lifetime_list = xls_refmeas_data['RefMeas_Lifetime_lifetime_list'][i]
+                cur_species_names_list = None if ('RefMeas_Lifetime_species_name_list' not in xls_refmeas_data.keys() or pandas.isnull(xls_refmeas_data['RefMeas_Lifetime_species_name_list'][i])) else xls_refmeas_data['RefMeas_Lifetime_species_name_list'][i]
+                ## split the semicolon-separated list
+                all_cur_species_fractions = cur_species_fraction_list.split(";")
+                all_cur_lifetimes = cur_lifetime_list.split(";")
+                all_cur_species_names = [] if cur_species_names_list is None else cur_species_names_list.split(";")
+                if len(all_cur_species_fractions) != len(all_cur_lifetimes):
+                    print('ERROR: Number of species-fractions (%i) and lifetimes (%i) for reference measurement (Tab \'Reference_measurements\' differs.'
+                        % (len(all_cur_species_fractions), len(all_cur_lifetimes)))
+                ## Create new RefMeasurementLifetime objects
+                for tmpj in range(len(all_cur_species_fractions)):
+                    cur_ref_measurement_lifetime = ihm.flr.RefMeasurementLifetime(
+                        species_fraction=float(all_cur_species_fractions[tmpj]),
+                        lifetime=float(all_cur_lifetimes[tmpj]),
+                        species_name=None if (len(all_cur_species_names) != len(all_cur_species_fractions)) else
+                        all_cur_species_names[tmpj])
+                    if cur_ref_measurement_lifetime not in list_ref_measurement_lifetimes:
+                        list_ref_measurement_lifetimes.append(cur_ref_measurement_lifetime)
+                    cur_ref_measurement.add_lifetime(cur_ref_measurement_lifetime)
+
+            if cur_ref_measurement not in list_ref_measurements:
+                list_ref_measurements.append(cur_ref_measurement)
+            cur_ref_measurement_index = list_ref_measurements.index(cur_ref_measurement)
+            list_of_object_indices_refmeas[i]['Reference_measurement'] = cur_ref_measurement_index
+            ## Store the reference measurement for the reference measurement group
+            if cur_ref_measurement_group_id not in tmp_list_for_reference_measurement_groups.keys():
+                tmp_list_for_reference_measurement_groups[cur_ref_measurement_group_id] = []
+            tmp_list_for_reference_measurement_groups[cur_ref_measurement_group_id].append(cur_ref_measurement)
+
+        for i in range(nr_of_entries_refmeas):
+            cur_ref_measurement_group_id = xls_refmeas_data['RefMeas_Group_ID'][i]
+            cur_ref_measurement_group_details = None if ('RefMeas_Group_Details' not in xls_refmeas_data.keys() or pandas.isnull(xls_refmeas_data['RefMeas_Group_Details'][i])) else xls_refmeas_data['RefMeas_Group_Details'][i]
+            cur_ref_measurement_group = ihm.flr.RefMeasurementGroup(details = cur_ref_measurement_group_details)
+            ## add the reference measurements for the current reference measurement group
+            for entry in tmp_list_for_reference_measurement_groups[cur_ref_measurement_group_id]:
+                cur_ref_measurement_group.add_ref_measurement(entry)
+            if cur_ref_measurement_group not in list_ref_measurement_groups:
+                list_ref_measurement_groups.append(cur_ref_measurement_group)
+                list_ref_measurement_group_ids.append(cur_ref_measurement_group_id)
+
+
     ###### FLR ######
     if BEVERBOSE:
         print(' ... Processing tab \'FLR\' ...')
@@ -1108,7 +2225,6 @@ def do(excel_filename, cifout_filename, atom_site_filename):
 
     #### Create the objects
     ###### Sample conditions
-    list_sample_conditions = []
     for i in range(nr_of_entries_flr):
         ## get the respective column for the sample condition
         cur_sample_condition_details = None if ('FLR_Sample_condition' not in xls_flr_data.keys() or pandas.isnull(xls_flr_data['FLR_Sample_condition'][i])) else xls_flr_data['FLR_Sample_condition'][i]
@@ -1123,7 +2239,6 @@ def do(excel_filename, cifout_filename, atom_site_filename):
         list_of_object_indices[i]['Sample_condition'] = cur_sample_condition_index
 
     ###### Instrument
-    list_instruments = []
     for i in range(nr_of_entries_flr):
         ## get the respective column for the sample condition
         cur_instrument_details = None if ('FLR_Instrument' not in xls_flr_data.keys() or pandas.isnull(xls_flr_data['FLR_Instrument'][i])) else xls_flr_data['FLR_Instrument'][i]
@@ -1137,20 +2252,27 @@ def do(excel_filename, cifout_filename, atom_site_filename):
         cur_instrument_index = list_instruments.index(cur_instrument)
         list_of_object_indices[i]['Instrument'] = cur_instrument_index
 
-    ###### Experimental settings
-    list_exp_settings = []
+    ###### Instrument settings
     for i in range(nr_of_entries_flr):
-        cur_exp_setting_details = None if ('FLR_Experimental_setting' not in xls_flr_data.keys() or pandas.isnull(xls_flr_data['FLR_Experimental_setting'][i])) else xls_flr_data['FLR_Experimental_setting'][i]
-        cur_exp_setting = ihm.flr.ExpSetting(details=cur_exp_setting_details)
-        cur_exp_setting_index = -1
-        if cur_exp_setting not in list_exp_settings:
-            list_exp_settings.append(cur_exp_setting)
-        cur_exp_setting_index = list_exp_settings.index(cur_exp_setting)
-        list_of_object_indices[i]['Exp_setting'] = cur_exp_setting_index
+        cur_inst_setting_details = None if ('FLR_Instrument_setting' not in xls_flr_data.keys() or pandas.isnull(xls_flr_data['FLR_Instrument_setting'][i])) else xls_flr_data['FLR_Instrument_setting'][i]
+        cur_inst_setting = ihm.flr.InstSetting(details=cur_inst_setting_details)
+        cur_inst_setting_index = -1
+        if cur_inst_setting not in list_inst_settings:
+            list_inst_settings.append(cur_inst_setting)
+        cur_inst_setting_index = list_inst_settings.index(cur_inst_setting)
+        list_of_object_indices[i]['Instrument_setting'] = cur_inst_setting_index
+
+    ###### Experimental condition
+    for i in range(nr_of_entries_flr):
+        cur_exp_condition_details = None if ('FLR_Experimental_condition' not in xls_flr_data.keys() or pandas.isnull(xls_flr_data['FLR_Experimental_condition'][i])) else xls_flr_data['FLR_Experimental_condition'][i]
+        cur_exp_condition = ihm.flr.ExpCondition(details=cur_exp_condition_details)
+        cur_exp_condition_index = -1
+        if cur_exp_condition not in list_exp_conditions:
+            list_exp_conditions.append(cur_exp_condition)
+        cur_exp_condition_index = list_exp_conditions.index(cur_exp_condition)
+        list_of_object_indices[i]['Experimental_condition'] = cur_exp_condition_index
 
     ###### Samples
-    list_samples = []
-    list_sample_ids = []
     for i in range(nr_of_entries_flr):
         cur_sample_id = xls_flr_data['FLR_Sample']
         cur_sample_num_of_probes = int(xls_flr_data['FLR_Sample_num_of_probes'][i])
@@ -1171,17 +2293,17 @@ def do(excel_filename, cifout_filename, atom_site_filename):
     ###### Experiment
     ## in case of the experiment, there is no need to read something from the file. Everything is defined before
     Experiment_1 = ihm.flr.Experiment()
-    list_experiments = []
     cur_experiment_index = -1
     for i in range(nr_of_entries_flr):
-        ## make sure that every instrument-exp_setting-sample-combination is there only once
+        ## make sure that every instrument-inst_setting-exp_condition-sample-combination is there only once
         cur_instrument = list_instruments[list_of_object_indices[i]['Instrument']]
-        cur_exp_setting = list_exp_settings[list_of_object_indices[i]['Exp_setting']]
+        cur_inst_setting = list_inst_settings[list_of_object_indices[i]['Instrument_setting']]
+        cur_exp_condition = list_exp_conditions[list_of_object_indices[i]['Experimental_condition']]
         cur_sample = list_samples[list_of_object_indices[i]['Sample']]
         cur_experiment_details = None if ('FLR_Experiment_Details' not in xls_flr_data.keys() or pandas.isnull(xls_flr_data['FLR_Experiment_Details'][i])) else xls_flr_data['FLR_Experiment_Details'][i]
 
-        if not Experiment_1.contains(cur_instrument,cur_exp_setting,cur_sample):
-            Experiment_1.add_entry(instrument=cur_instrument, exp_setting=cur_exp_setting,sample=cur_sample, details=cur_experiment_details)
+        if not Experiment_1.contains(cur_instrument,cur_inst_setting,cur_exp_condition,cur_sample):
+            Experiment_1.add_entry(instrument=cur_instrument, inst_setting=cur_inst_setting, exp_condition=cur_exp_condition, sample=cur_sample, details=cur_experiment_details)
     if Experiment_1 not in list_experiments:
         list_experiments.append(Experiment_1)
     for i in range(nr_of_entries_flr):
@@ -1189,10 +2311,8 @@ def do(excel_filename, cifout_filename, atom_site_filename):
         list_of_object_indices[i]['Experiment'] = cur_experiment_index
 
     ###### Probe
-    list_chemical_descriptors = []
     ##### Donor
     #### Probe_list
-    list_probe_donors = []
     for i in range(nr_of_entries_flr):
         cur_probe_donor_name = xls_flr_data['FLR_Probe_donor_name'][i]
         cur_probe_donor_origin = xls_flr_data['FLR_Probe_donor_origin'][i]
@@ -1200,7 +2320,7 @@ def do(excel_filename, cifout_filename, atom_site_filename):
         cur_reactive_probe_donor_flag = False
         cur_reactive_probe_donor_name = None
         ## TODO! MODIFY TO HANDLE EMPTY CELLS HERE!
-        if 'FLR_Probe_donor_name' in xls_flr_data.keys():
+        if 'FLR_Reactive_probe_donor_name' in xls_flr_data.keys() and not pandas.isnull(xls_flr_data['FLR_Reactive_probe_donor_name'][i]):
             cur_reactive_probe_donor_flag = True
             cur_reactive_probe_donor_name = xls_flr_data['FLR_Reactive_probe_donor_name'][i]
         cur_probe_list_donor = ihm.flr.ProbeList(chromophore_name=cur_probe_donor_name, reactive_probe_flag = cur_reactive_probe_donor_flag, reactive_probe_name= cur_reactive_probe_donor_name,probe_origin=cur_probe_donor_origin, probe_link_type=cur_probe_donor_link_type)
@@ -1237,14 +2357,16 @@ def do(excel_filename, cifout_filename, atom_site_filename):
                                                                                     inchi_key = None if ('FLR_Chromophore_donor_inchi_key' not in xls_flr_data.keys() or pandas.isnull(xls_flr_data['FLR_Chromophore_donor_inchi_key'][i])) else xls_flr_data['FLR_Chromophore_donor_inchi_key'][i])
 
         ## In case the current chemical descriptor is already present in the chemical descriptors list, we use that one instead of creating a new one.
-        if not occurs_in_list(cur_reactive_probe_donor_chemical_descriptor,list_chemical_descriptors):
-            list_chemical_descriptors.append(cur_reactive_probe_donor_chemical_descriptor)
-        else:
-            cur_reactive_probe_donor_chemical_descriptor = [x for x in list_chemical_descriptors if x.__dict__ == cur_reactive_probe_donor_chemical_descriptor.__dict__][0]
-        if not occurs_in_list(cur_chromophore_donor_chemical_descriptor,list_chemical_descriptors):
-            list_chemical_descriptors.append(cur_chromophore_donor_chemical_descriptor)
-        else:
-            cur_chromophore_donor_chemical_descriptor = [x for x in list_chemical_descriptors if x.__dict__ == cur_chromophore_donor_chemical_descriptor.__dict__][0]
+        if cur_reactive_probe_donor_chemical_descriptor is not None:
+            if not occurs_in_list(cur_reactive_probe_donor_chemical_descriptor,list_chemical_descriptors):
+                list_chemical_descriptors.append(cur_reactive_probe_donor_chemical_descriptor)
+            else:
+                cur_reactive_probe_donor_chemical_descriptor = [x for x in list_chemical_descriptors if x.__dict__ == cur_reactive_probe_donor_chemical_descriptor.__dict__][0]
+        if cur_chromophore_donor_chemical_descriptor is not None:
+            if not occurs_in_list(cur_chromophore_donor_chemical_descriptor,list_chemical_descriptors):
+                list_chemical_descriptors.append(cur_chromophore_donor_chemical_descriptor)
+            else:
+                cur_chromophore_donor_chemical_descriptor = [x for x in list_chemical_descriptors if x.__dict__ == cur_chromophore_donor_chemical_descriptor.__dict__][0]
 
         cur_probe_descriptor_donor = ihm.flr.ProbeDescriptor(reactive_probe_chem_descriptor= cur_reactive_probe_donor_chemical_descriptor,
                                                             chromophore_chem_descriptor= cur_chromophore_donor_chemical_descriptor,
@@ -1265,14 +2387,13 @@ def do(excel_filename, cifout_filename, atom_site_filename):
 
     ##### Acceptor
     #### Probe_list
-    list_probe_acceptors = []
     for i in range(nr_of_entries_flr):
         cur_probe_acceptor_name = xls_flr_data['FLR_Probe_acceptor_name'][i]
         cur_probe_acceptor_origin = xls_flr_data['FLR_Probe_acceptor_origin'][i]
         cur_probe_acceptor_link_type = xls_flr_data['FLR_Probe_acceptor_link_type'][i]
         cur_reactive_probe_acceptor_flag = False
         cur_reactive_probe_acceptor_name = None
-        if not pandas.isnull(xls_flr_data['FLR_Probe_acceptor_name'][i]):
+        if 'FLR_Reactive_probe_acceptor_name' in xls_flr_data.keys() and not pandas.isnull(xls_flr_data['FLR_Reactive_probe_acceptor_name'][i]):
             cur_reactive_probe_acceptor_flag = True
             cur_reactive_probe_acceptor_name = xls_flr_data['FLR_Reactive_probe_acceptor_name'][i]
         cur_probe_list_acceptor = ihm.flr.ProbeList(chromophore_name=cur_probe_acceptor_name,
@@ -1309,14 +2430,16 @@ def do(excel_filename, cifout_filename, atom_site_filename):
                                                                                     inchi = None if ('FLR_Chromophore_acceptor_inchi' not in xls_flr_data.keys() or pandas.isnull(xls_flr_data['FLR_Chromophore_acceptor_inchi'][i])) else xls_flr_data['FLR_Chromophore_acceptor_inchi'][i],
                                                                                     inchi_key = None if ('FLR_Chromophore_acceptor_inchi_key' not in xls_flr_data.keys() or pandas.isnull(xls_flr_data['FLR_Chromophore_acceptor_inchi_key'][i])) else xls_flr_data['FLR_Chromophore_acceptor_inchi_key'][i])
 
-        if not occurs_in_list(cur_reactive_probe_acceptor_chemical_descriptor,list_chemical_descriptors):
-            list_chemical_descriptors.append(cur_reactive_probe_acceptor_chemical_descriptor)
-        else:
-            cur_reactive_probe_acceptor_chemical_descriptor = [x for x in list_chemical_descriptors if x.__dict__ == cur_reactive_probe_acceptor_chemical_descriptor.__dict__][0]
-        if not occurs_in_list(cur_chromophore_acceptor_chemical_descriptor,list_chemical_descriptors):
-            list_chemical_descriptors.append(cur_chromophore_acceptor_chemical_descriptor)
-        else:
-            cur_chromophore_acceptor_chemical_descriptor = [x for x in list_chemical_descriptors if x.__dict__ == cur_chromophore_acceptor_chemical_descriptor.__dict__][0]
+        if cur_reactive_probe_acceptor_chemical_descriptor is not None:
+            if not occurs_in_list(cur_reactive_probe_acceptor_chemical_descriptor,list_chemical_descriptors):
+                list_chemical_descriptors.append(cur_reactive_probe_acceptor_chemical_descriptor)
+            else:
+                cur_reactive_probe_acceptor_chemical_descriptor = [x for x in list_chemical_descriptors if x.__dict__ == cur_reactive_probe_acceptor_chemical_descriptor.__dict__][0]
+        if cur_chromophore_acceptor_chemical_descriptor is not None:
+            if not occurs_in_list(cur_chromophore_acceptor_chemical_descriptor,list_chemical_descriptors):
+                list_chemical_descriptors.append(cur_chromophore_acceptor_chemical_descriptor)
+            else:
+                cur_chromophore_acceptor_chemical_descriptor = [x for x in list_chemical_descriptors if x.__dict__ == cur_chromophore_acceptor_chemical_descriptor.__dict__][0]
 
         cur_probe_descriptor_acceptor = ihm.flr.ProbeDescriptor(reactive_probe_chem_descriptor= cur_reactive_probe_acceptor_chemical_descriptor,
                                                             chromophore_chem_descriptor= cur_chromophore_acceptor_chemical_descriptor,
@@ -1336,9 +2459,7 @@ def do(excel_filename, cifout_filename, atom_site_filename):
         cur_probe_acceptor_index = list_probe_acceptors.index(cur_probe_acceptor)
         list_of_object_indices[i]['Probe_acceptor'] = cur_probe_acceptor_index
 
-
     ###### Modified and mutated residues
-    list_modified_residues = []
     for i in range(nr_of_entries_flr):
         if ('FLR_Modified_residue_donor_name' in xls_flr_data.keys() and not pandas.isnull(xls_flr_data['FLR_Modified_residue_donor_name'][i])) and (('FLR_Modified_residue_donor_smiles' in xls_flr_data.keys() and not pandas.isnull(xls_flr_data['FLR_Modified_residue_donor_smiles'][i])) or ('FLR_Modified_residue_donor_smiles_canonical' in xls_flr_data.keys() and not pandas.isnull(xls_flr_data['FLR_Modified_residue_donor_smiles_canonical'][i])) or ('FLR_Modified_residue_donor_inchi' in xls_flr_data.keys() and not pandas.isnull(xls_flr_data['FLR_Modified_residue_donor_inchi'][i])) or ('FLR_Modified_residue_donor_inchi_key' in xls_flr_data.keys() and not pandas.isnull(xls_flr_data['FLR_Modified_residue_donor_inchi_key'][i]))):
             cur_modified_residue_donor_chemical_descriptor = ihm.ChemDescriptor(
@@ -1360,6 +2481,7 @@ def do(excel_filename, cifout_filename, atom_site_filename):
                 list_modified_residues.append(cur_modified_residue_donor_chemical_descriptor)
             cur_modified_residue_donor_index = list_modified_residues.index(cur_modified_residue_donor_chemical_descriptor)
             list_of_object_indices[i]['Modified_residue_donor'] = cur_modified_residue_donor_index
+
     ## acceptor
     for i in range(nr_of_entries_flr):
         if ('FLR_Modified_residue_acceptor_name' in xls_flr_data.keys() and not pandas.isnull(xls_flr_data['FLR_Modified_residue_acceptor_name'][i])) and (('FLR_Modified_residue_acceptor_smiles' in xls_flr_data.keys() and not pandas.isnull(xls_flr_data['FLR_Modified_residue_acceptor_smiles'][i])) or ('FLR_Modified_residue_acceptor_smiles_canonical' in xls_flr_data.keys() and not pandas.isnull(xls_flr_data['FLR_Modified_residue_acceptor_smiles_canonical'][i])) or ('FLR_Modified_residue_acceptor_inchi' in xls_flr_data.keys() and not pandas.isnull(xls_flr_data['FLR_Modified_residue_acceptor_inchi'][i])) or ('FLR_Modified_residue_acceptor_inchi_key' in xls_flr_data.keys() and not pandas.isnull(xls_flr_data['FLR_Modified_residue_acceptor_inchi_key'][i]))):
@@ -1384,18 +2506,17 @@ def do(excel_filename, cifout_filename, atom_site_filename):
             cur_modified_residue_acceptor_index = list_modified_residues.index(cur_modified_residue_acceptor_chemical_descriptor)
             list_of_object_indices[i]['Modified_residue_acceptor'] = cur_modified_residue_acceptor_index
     #### Mutated residues
-    list_mutated_residues = []
     for i in range(nr_of_entries_flr):
-        if ('FLR_Mutated_residue_donor_name' in xls_flr_data.keys() and not pandas.isnull(xls_flr_data['FLR_Mutated_residue_donor_name'][i])) and (('FLR_mutated_residue_donor_smiles' in xls_flr_data.keys() and not pandas.isnull(xls_flr_data['FLR_mutated_residue_donor_smiles'][i])) or ('FLR_mutated_residue_donor_smiles_canonical' in xls_flr_data.keys() and not pandas.isnull(xls_flr_data['FLR_mutated_residue_donor_smiles_canonical'][i])) or ('FLR_mutated_residue_donor_inchi' in xls_flr_data.keys() and not pandas.isnull(xls_flr_data['FLR_Modified_residue_donor_inchi'][i])) or ('FLR_mutated_residue_donor_inchi_key' in xls_flr_data.keys() and not pandas.isnull(xls_flr_data['FLR_Modified_residue_donor_inchi_key'][i]))):
+        if ('FLR_Mutated_residue_donor_name' in xls_flr_data.keys() and not pandas.isnull(xls_flr_data['FLR_Mutated_residue_donor_name'][i])) and (('FLR_Mutated_residue_donor_smiles' in xls_flr_data.keys() and not pandas.isnull(xls_flr_data['FLR_Mutated_residue_donor_smiles'][i])) or ('FLR_Mutated_residue_donor_smiles_canonical' in xls_flr_data.keys() and not pandas.isnull(xls_flr_data['FLR_Mutated_residue_donor_smiles_canonical'][i])) or ('FLR_Mutated_residue_donor_inchi' in xls_flr_data.keys() and not pandas.isnull(xls_flr_data['FLR_Modified_residue_donor_inchi'][i])) or ('FLR_Mutated_residue_donor_inchi_key' in xls_flr_data.keys() and not pandas.isnull(xls_flr_data['FLR_Modified_residue_donor_inchi_key'][i]))):
             cur_mutated_residue_donor_chemical_descriptor = ihm.ChemDescriptor(
-                                                                                    auth_name = xls_flr_data['FLR_mutated_residue_donor_name'][i],
-                                                                                    chem_comp_id = None if ('FLR_mutated_residue_donor_chem_comp_id' not in xls_flr_data.keys() or pandas.isnull(xls_flr_data['FLR_mutated_residue_donor_chem_comp_id'][i])) else xls_flr_data['FLR_mutated_residue_donor_chem_comp_id'][i],
-                                                                                    chemical_name = None if ('FLR_Mmutated_residue_donor_chemical_name' not in xls_flr_data.keys() or pandas.isnull(xls_flr_data['FLR_mutated_residue_donor_chemical_name'][i])) else xls_flr_data['FLR_mutated_residue_donor_chemical_name'][i],
-                                                                                    common_name = None if ('FLR_mutated_residue_donor_common_name' not in xls_flr_data.keys() or pandas.isnull(xls_flr_data['FLR_mutated_residue_donor_common_name'][i])) else xls_flr_data['FLR_mutated_residue_donor_common_name'][i],
-                                                                                    smiles = None if ('FLR_mutated_residue_donor_smiles' not in xls_flr_data.keys() or pandas.isnull(xls_flr_data['FLR_mutated_residue_donor_smiles'][i])) else xls_flr_data['FLR_mutated_residue_donor_smiles'][i],
-                                                                                    smiles_canonical = None if ('FLR_mutated_residue_donor_smiles_canonical' not in xls_flr_data.keys() or pandas.isnull(xls_flr_data['FLR_mutated_residue_donor_smiles_canonical'][i])) else xls_flr_data['FLR_mutated_residue_donor_smiles_canonical'][i],
-                                                                                    inchi = None if ('FLR_mutated_residue_donor_inchi' not in xls_flr_data.keys() or pandas.isnull(xls_flr_data['FLR_mutated_residue_donor_inchi'][i])) else xls_flr_data['FLR_mutated_residue_donor_inchi'][i],
-                                                                                    inchi_key = None if ('FLR_mutated_residue_donor_inchi_key' not in xls_flr_data.keys() or pandas.isnull(xls_flr_data['FLR_mutated_residue_donor_inchi_key'][i])) else xls_flr_data['FLR_mutated_residue_donor_inchi_key'][i])
+                                                                                    auth_name = xls_flr_data['FLR_Mutated_residue_donor_name'][i],
+                                                                                    chem_comp_id = None if ('FLR_Mutated_residue_donor_chem_comp_id' not in xls_flr_data.keys() or pandas.isnull(xls_flr_data['FLR_Mutated_residue_donor_chem_comp_id'][i])) else xls_flr_data['FLR_Mutated_residue_donor_chem_comp_id'][i],
+                                                                                    chemical_name = None if ('FLR_Mutated_residue_donor_chemical_name' not in xls_flr_data.keys() or pandas.isnull(xls_flr_data['FLR_Mutated_residue_donor_chemical_name'][i])) else xls_flr_data['FLR_Mutated_residue_donor_chemical_name'][i],
+                                                                                    common_name = None if ('FLR_Mutated_residue_donor_common_name' not in xls_flr_data.keys() or pandas.isnull(xls_flr_data['FLR_Mutated_residue_donor_common_name'][i])) else xls_flr_data['FLR_Mutated_residue_donor_common_name'][i],
+                                                                                    smiles = None if ('FLR_Mutated_residue_donor_smiles' not in xls_flr_data.keys() or pandas.isnull(xls_flr_data['FLR_Mutated_residue_donor_smiles'][i])) else xls_flr_data['FLR_Mutated_residue_donor_smiles'][i],
+                                                                                    smiles_canonical = None if ('FLR_Mutated_residue_donor_smiles_canonical' not in xls_flr_data.keys() or pandas.isnull(xls_flr_data['FLR_Mutated_residue_donor_smiles_canonical'][i])) else xls_flr_data['FLR_Mutated_residue_donor_smiles_canonical'][i],
+                                                                                    inchi = None if ('FLR_Mutated_residue_donor_inchi' not in xls_flr_data.keys() or pandas.isnull(xls_flr_data['FLR_Mutated_residue_donor_inchi'][i])) else xls_flr_data['FLR_Mutated_residue_donor_inchi'][i],
+                                                                                    inchi_key = None if ('FLR_Mutated_residue_donor_inchi_key' not in xls_flr_data.keys() or pandas.isnull(xls_flr_data['FLR_Mutated_residue_donor_inchi_key'][i])) else xls_flr_data['FLR_Mutated_residue_donor_inchi_key'][i])
 
             if not occurs_in_list(cur_mutated_residue_donor_chemical_descriptor, list_chemical_descriptors):
                 list_chemical_descriptors.append(cur_mutated_residue_donor_chemical_descriptor)
@@ -1409,7 +2530,7 @@ def do(excel_filename, cifout_filename, atom_site_filename):
             list_of_object_indices[i]['Mutated_residue_donor'] = cur_mutated_residue_donor_index
     ## acceptor
     for i in range(nr_of_entries_flr):
-        if ('FLR_Mutated_resdiue_acceptor_name' in xls_flr_data.keys() and not pandas.isnull(xls_flr_data['FLR_Mutated_residue_acceptor_name'][i])) and (('FLR_Mutated_residue_acceptor_smiles' in xls_flr_data.keys() and not pandas.isnull(xls_flr_data['FLR_Mutated_residue_acceptor_smiles'][i])) or ('FLR_Mutated_residue_acceptor_smiles_canonical' in xls_flr_data.keys() and not pandas.isnull(xls_flr_data['FLR_Mutated_residue_acceptor_smiles_canonical'][i])) or ('FLR_Mutated_residue_acceptor_inchi' in xls_flr_data.keys() and not pandas.isnull(xls_flr_data['FLR_Mutated_residue_acceptor_inchi'][i])) or ('FLR_Mutated_residue_acceptor_inchi_key' in xls_flr_data.keys() and not pandas.isnull(xls_flr_data['FLR_Mutated_residue_acceptor_inchi_key'][i]))):
+        if ('FLR_Mutated_residue_acceptor_name' in xls_flr_data.keys() and not pandas.isnull(xls_flr_data['FLR_Mutated_residue_acceptor_name'][i])) and (('FLR_Mutated_residue_acceptor_smiles' in xls_flr_data.keys() and not pandas.isnull(xls_flr_data['FLR_Mutated_residue_acceptor_smiles'][i])) or ('FLR_Mutated_residue_acceptor_smiles_canonical' in xls_flr_data.keys() and not pandas.isnull(xls_flr_data['FLR_Mutated_residue_acceptor_smiles_canonical'][i])) or ('FLR_Mutated_residue_acceptor_inchi' in xls_flr_data.keys() and not pandas.isnull(xls_flr_data['FLR_Mutated_residue_acceptor_inchi'][i])) or ('FLR_Mutated_residue_acceptor_inchi_key' in xls_flr_data.keys() and not pandas.isnull(xls_flr_data['FLR_Mutated_residue_acceptor_inchi_key'][i]))):
             cur_mutated_residue_acceptor_chemical_descriptor = ihm.ChemDescriptor(
                                                                                     auth_name = xls_flr_data['FLR_Mutated_residue_acceptor_name'][i],
                                                                                     chem_comp_id = None if ('FLR_Mutated_residue_acceptor_chem_comp_id' not in xls_flr_data.keys() or pandas.isnull(xls_flr_data['FLR_Mutated_residue_acceptor_chem_comp_id'][i])) else xls_flr_data['FLR_Mutated_residue_acceptor_chem_comp_id'][i],
@@ -1431,9 +2552,6 @@ def do(excel_filename, cifout_filename, atom_site_filename):
             list_of_object_indices[i]['Mutated_residue_acceptor'] = cur_mutated_residue_acceptor_index
 
     ###### Poly_probe_position
-    list_poly_probe_positions = []
-    list_resatoms = []
-    list_residue_objects = []
     for i in range(nr_of_entries_flr):
         cur_poly_probe_position_auth_name = None if ('FLR_Poly_probe_position_donor_name' not in xls_flr_data.keys() or pandas.isnull(xls_flr_data['FLR_Poly_probe_position_donor_name'][i])) else xls_flr_data['FLR_Poly_probe_position_donor_name'][i]
         cur_poly_probe_position_entity = xls_flr_data['FLR_Poly_probe_position_donor_entity'][i]
@@ -1514,7 +2632,6 @@ def do(excel_filename, cifout_filename, atom_site_filename):
         list_of_object_indices[i]['Poly_probe_position_acceptor'] = cur_poly_probe_position_index
 
     ###### Sample_probe_details
-    list_sample_probe_details = []
     ## donor
     for i in range(nr_of_entries_flr):
         cur_sample_probe_details_donor_description = None if ('FLR_Sample_probe_details_donor_description' not in xls_flr_data.keys() or pandas.isnull(xls_flr_data['FLR_Sample_probe_details_donor_description'][i])) else xls_flr_data['FLR_Sample_probe_details_donor_description'][i]
@@ -1545,7 +2662,6 @@ def do(excel_filename, cifout_filename, atom_site_filename):
 
 
     ###### Probe_descriptor_conjugate
-    list_probe_conjugate_descriptors = []
     for i in range(nr_of_entries_flr):
         cur_probe_conjugate_descriptor_donor = ihm.ChemDescriptor(auth_name=xls_flr_data['FLR_Probe_conjugate_donor_name'][i],
                                                                    chem_comp_id = None if ('FLR_Probe_conjugate_donor_chem_comp_id' not in xls_flr_data.keys() or pandas.isnull(xls_flr_data['FLR_Probe_conjugate_donor_chem_comp_id'][i])) else xls_flr_data['FLR_Probe_conjugate_donor_chem_comp_id'][i],
@@ -1588,7 +2704,6 @@ def do(excel_filename, cifout_filename, atom_site_filename):
         list_of_object_indices[i]['Probe_conjugate_descriptor_acceptor'] = cur_probe_conjugate_descriptor_acceptor_index
 
     ###### Poly_probe_conjugate
-    list_poly_probe_conjugates = []
     for i in range(nr_of_entries_flr):
         cur_poly_probe_conjugate_ambiguous_stoichiometry_donor = False if ('FLR_Probe_conjugate_ambiguous_probe_stoichiometry_donor' not in xls_flr_data.keys() or xls_flr_data['FLR_Probe_conjugate_ambiguous_probe_stoichiometry_donor'][i] in ['False','no','No','NO']) else True
         cur_poly_probe_conjugate_probe_stoichiometry_donor = None if ('FLR_Probe_conjugate_probe_stoichiometry_donor' not in xls_flr_data.keys() or pandas.isnull(xls_flr_data['FLR_Probe_conjugate_probe_stoichiometry_donor'][i])) else xls_flr_data['FLR_Probe_conjugate_probe_stoichiometry_donor'][i]
@@ -1615,7 +2730,6 @@ def do(excel_filename, cifout_filename, atom_site_filename):
             list_poly_probe_conjugates.append(cur_poly_probe_conjugate_acceptor)
         cur_poly_probe_conjugate_index = list_poly_probe_conjugates.index(cur_poly_probe_conjugate_acceptor)
         list_of_object_indices[i]['Poly_probe_conjugate_acceptor'] = cur_poly_probe_conjugate_index
-
 
 
     ###### FRET_Forster_radius
@@ -1646,34 +2760,62 @@ def do(excel_filename, cifout_filename, atom_site_filename):
         cur_delta = None if ('FLR_Calibration_parameters_delta' not in xls_flr_data.keys() or pandas.isnull(xls_flr_data['FLR_Calibration_parameters_delta'][i])) else float(xls_flr_data['FLR_Calibration_parameters_delta'][i])
         cur_gG_gR_ratio = None if ('FLR_Calibration_parameters_gG_gR_ratio' not in xls_flr_data.keys() or pandas.isnull(xls_flr_data['FLR_Calibration_parameters_gG_gR_ratio'][i])) else float(xls_flr_data['FLR_Calibration_parameters_gG_gR_ratio'][i])
         cur_a_b = None if ('FLR_Calibration_parameters_a_b' not in xls_flr_data.keys() or pandas.isnull(xls_flr_data['FLR_Calibration_parameters_a_b'][i])) else float(xls_flr_data['FLR_Calibration_parameters_a_b'][i])
-        cur_fret_calibration_parameters = ihm.flr.FRETCalibrationParameters(phi_acceptor = cur_phi_acceptor,
-                                                                        alpha = cur_alpha,
-                                                                        alpha_sd = cur_alpha_sd,
-                                                                        beta = cur_beta,
-                                                                        gamma = cur_gamma,
-                                                                        delta = cur_delta,
-                                                                        gg_gr_ratio = cur_gG_gR_ratio,
-                                                                        a_b = cur_a_b)
-
+        ## Make sure one fret_calibration_parameter is not None
+        cur_fret_calibration_parameters = None
+        if (cur_phi_acceptor is not None) or (cur_alpha is not None) or (cur_beta is not None) or (cur_gamma is not None) or (cur_delta is not None) or (cur_gG_gR_ratio is not None) or (cur_a_b is not None):
+            cur_fret_calibration_parameters = ihm.flr.FRETCalibrationParameters(phi_acceptor = cur_phi_acceptor,
+                                                                            alpha = cur_alpha,
+                                                                            alpha_sd = cur_alpha_sd,
+                                                                            beta = cur_beta,
+                                                                            gamma = cur_gamma,
+                                                                            delta = cur_delta,
+                                                                            gg_gr_ratio = cur_gG_gR_ratio,
+                                                                            a_b = cur_a_b)
+        else:
+            cur_fret_calibration_parameters = None
         cur_fret_calibration_parameters_index = -1
-        if cur_fret_calibration_parameters not in list_fret_calibration_parameters:
-            list_fret_calibration_parameters.append(cur_fret_calibration_parameters)
-        cur_fret_calibration_parameters_index = list_fret_calibration_parameters.index(cur_fret_calibration_parameters)
-        list_of_object_indices[i]['FRET_calibration_parameters'] = cur_fret_calibration_parameters_index
+        if cur_fret_calibration_parameters is not None:
+            if not occurs_in_list(cur_fret_calibration_parameters, list_fret_calibration_parameters):
+                list_fret_calibration_parameters.append(cur_fret_calibration_parameters)
+            cur_fret_calibration_parameters_index = list_fret_calibration_parameters.index(cur_fret_calibration_parameters)
+            list_of_object_indices[i]['FRET_calibration_parameters'] = cur_fret_calibration_parameters_index
+
+    ###### Lifetime Fit Model
+    list_lifetime_fit_models = []
+    for i in range(nr_of_entries_flr):
+        cur_lifetime_fit_model_name = None if ('FLR_Lifetime_fit_model_name' not in xls_flr_data.keys() or pandas.isnull(xls_flr_data['FLR_Lifetime_fit_model_name'][i])) else xls_flr_data['FLR_Lifetime_fit_model_name'][i]
+        cur_lifetime_fit_model_description = None if ('FLR_Lifetime_fit_model_description' not in xls_flr_data.keys() or pandas.isnull(xls_flr_data['FLR_Lifetime_fit_model_description'][i])) else xls_flr_data['FLR_Lifetime_fit_model_description'][i]
+        cur_lifetime_fit_model_external_file_id = None if ('FLR_Lifetime_fit_model_external_file' not in xls_flr_data.keys() or pandas.isnull(xls_flr_data['FLR_Lifetime_fit_model_external_file'][i])) else xls_flr_data['FLR_Lifetime_fit_model_external_file'][i]
+        cur_lifetime_fit_model_citation_id = None if ('FLR_Lifetime_fit_model_citation' not in xls_flr_data.keys() or pandas.isnull(xls_flr_data['FLR_Lifetime_fit_model_citation'][i])) else xls_flr_data['FLR_Lifetime_fit_model_citation'][i]
+        cur_lifetime_fit_model_external_file = None if (cur_lifetime_fit_model_external_file_id is None) else list_external_files_locations[list_external_files_ids.index(cur_lifetime_fit_model_external_file_id)]
+        cur_lifetime_fit_model_citation = None if (cur_lifetime_fit_model_citation_id is None) else list_citations[list_citation_ids.index(cur_lifetime_fit_model_citation_id)]
+        cur_lifetime_fit_model = ihm.flr.LifetimeFitModel(name = cur_lifetime_fit_model_name,
+                                                          description=cur_lifetime_fit_model_description,
+                                                          external_file=cur_lifetime_fit_model_external_file,
+                                                          citation=cur_lifetime_fit_model_citation)
+        if cur_lifetime_fit_model not in list_lifetime_fit_models:
+            list_lifetime_fit_models.append(cur_lifetime_fit_model)
+        cur_lifetime_fit_model_index = list_lifetime_fit_models.index(cur_lifetime_fit_model)
+        list_of_object_indices[i]['Lifetime_fit_model'] = cur_lifetime_fit_model_index
 
     ###### FRET_analysis
     list_fret_analysis = []
     for i in range(nr_of_entries_flr):
+        cur_fret_analysis_type = None if ('FLR_FRET_analysis_type' not in xls_flr_data.keys() or pandas.isnull(xls_flr_data['FLR_FRET_analysis_type'][i])) else xls_flr_data['FLR_FRET_analysis_type'][i]
         cur_fret_analysis_method_name = None if ('FLR_FRET_analysis_method_name' not in xls_flr_data.keys() or pandas.isnull(xls_flr_data['FLR_FRET_analysis_method_name'][i])) else xls_flr_data['FLR_FRET_analysis_method_name'][i]
         cur_fret_analysis_chi_square_reduced = None if ('FLR_FRET_analysis_chi_squared_reduced' not in xls_flr_data.keys() or pandas.isnull(xls_flr_data['FLR_FRET_analysis_chi_squared_reduced'][i])) else float(xls_flr_data['FLR_FRET_analysis_chi_squared_reduced'][i])
         cur_fret_analysis_experiment_id = list_experiments[list_of_object_indices[i]['Experiment']]
         cur_fret_analysis_sample_probe_id_1 = list_sample_probe_details[list_of_object_indices[i]['Sample_probe_details_donor']]
         cur_fret_analysis_sample_probe_id_2 = list_sample_probe_details[list_of_object_indices[i]['Sample_probe_details_acceptor']]
         cur_fret_analysis_forster_radius_id = list_fret_forster_radius[list_of_object_indices[i]['FRET_forster_radius']]
-        cur_fret_analysis_calibration_parameters_id = list_fret_calibration_parameters[list_of_object_indices[i]['FRET_calibration_parameters']]
+        cur_fret_analysis_calibration_parameters_id = None if (cur_fret_analysis_type != 'intensity-based') else list_fret_calibration_parameters[list_of_object_indices[i]['FRET_calibration_parameters']]
+        cur_lifetime_fit_model_id = None if ('FLR_Lifetime_fit_model_name' not in xls_flr_data.keys() or pandas.isnull(xls_flr_data['FLR_Lifetime_fit_model_name'][i])) else xls_flr_data['FLR_Lifetime_fit_model_name'][i]
+        cur_ref_measurement_group_id = None if ('FLR_Ref_measurement_group_id' not in xls_flr_data.keys() or pandas.isnull(xls_flr_data['FLR_Ref_measurement_group_id'][i])) else xls_flr_data['FLR_Ref_measurement_group_id'][i]
         cur_fret_analysis_dataset_list_id = xls_flr_data['FLR_FRET_analysis_dataset_list_id'][i]
         cur_fret_analysis_external_file_id = None if ('FLR_FRET_analysis_external_file_id' not in xls_flr_data.keys() or pandas.isnull(xls_flr_data['FLR_FRET_analysis_external_file_id'][i])) else xls_flr_data['FLR_FRET_analysis_external_file_id'][i]
         cur_fret_analysis_software_id = None if ('FLR_FRET_analysis_software_id' not in xls_flr_data.keys() or pandas.isnull(xls_flr_data['FLR_FRET_analysis_software_id'][i])) else xls_flr_data['FLR_FRET_analysis_software_id'][i]
+        cur_lifetime_fit_model = None if (cur_lifetime_fit_model_id is None) else list_lifetime_fit_models[list_of_object_indices[i]['Lifetime_fit_model']]
+        cur_ref_measurement_group = None if (cur_ref_measurement_group_id is None) else list_ref_measurement_groups[list_ref_measurement_group_ids.index(cur_ref_measurement_group_id)]
         ## get the dataset, external file, and software
         cur_fret_analysis_dataset = list_datasets[list_dataset_ids.index(cur_fret_analysis_dataset_list_id)]
         cur_fret_analysis_external_file = None if (cur_fret_analysis_external_file_id == None) else list_external_files_locations[list_external_files_ids.index(cur_fret_analysis_external_file_id)]
@@ -1682,7 +2824,10 @@ def do(excel_filename, cifout_filename, atom_site_filename):
                                                   sample_probe_1 = cur_fret_analysis_sample_probe_id_1,
                                                   sample_probe_2 = cur_fret_analysis_sample_probe_id_2,
                                                   forster_radius = cur_fret_analysis_forster_radius_id,
+                                                  type = cur_fret_analysis_type,
                                                   calibration_parameters = cur_fret_analysis_calibration_parameters_id,
+                                                  lifetime_fit_model = cur_lifetime_fit_model,
+                                                  ref_measurement_group = cur_ref_measurement_group,
                                                   method_name = cur_fret_analysis_method_name,
                                                   chi_square_reduced = cur_fret_analysis_chi_square_reduced,
                                                   dataset = cur_fret_analysis_dataset,
@@ -1698,13 +2843,14 @@ def do(excel_filename, cifout_filename, atom_site_filename):
     ###### Peak_assignment
     list_peak_assignments = []
     for i in range(nr_of_entries_flr):
-        cur_peak_assignment_method_name = xls_flr_data['FLR_Peak_assignment_method_name'][i]
+        cur_peak_assignment_method_name = None if ('FLR_Peak_assignment_method_name' not in xls_flr_data.keys() or pandas.isnull(xls_flr_data['FLR_Peak_assignment_method_name'][i])) else xls_flr_data['FLR_Peak_assignment_method_name'][i]
         cur_peak_assignment_details  = None if ('FLR_Peak_assignment_details' not in xls_flr_data.keys() or pandas.isnull(xls_flr_data['FLR_Peak_assignment_details'][i])) else xls_flr_data['FLR_Peak_assignment_details'][i]
-        cur_peak_assignment = ihm.flr.PeakAssignment(method_name = cur_peak_assignment_method_name, details = cur_peak_assignment_details)
+        cur_peak_assignment = None if (cur_peak_assignment_method_name is None) else ihm.flr.PeakAssignment(method_name = cur_peak_assignment_method_name, details = cur_peak_assignment_details)
         cur_peak_assignment_index = -1
-        if cur_peak_assignment not in list_peak_assignments:
-            list_peak_assignments.append(cur_peak_assignment)
-        cur_peak_assignment_index = list_peak_assignments.index(cur_peak_assignment)
+        if cur_peak_assignment is not None:
+            if cur_peak_assignment not in list_peak_assignments:
+                list_peak_assignments.append(cur_peak_assignment)
+            cur_peak_assignment_index = list_peak_assignments.index(cur_peak_assignment)
         list_of_object_indices[i]['Peak_assignment'] = cur_peak_assignment_index
 
     ###### Fret_distance_restraint_group
@@ -1733,7 +2879,7 @@ def do(excel_filename, cifout_filename, atom_site_filename):
         cur_fret_distance_restraint_population_fraction = None if ('FLR_FRET_distance_restraint_population_fraction' not in xls_flr_data.keys() or pandas.isnull(xls_flr_data['FLR_FRET_distance_restraint_population_fraction'][i])) else float(xls_flr_data['FLR_FRET_distance_restraint_population_fraction'][i])
         cur_fret_distance_restraint_sample_probe_id_1 =  list_sample_probe_details[list_of_object_indices[i]['Sample_probe_details_donor']]
         cur_fret_distance_restraint_sample_probe_id_2 =  list_sample_probe_details[list_of_object_indices[i]['Sample_probe_details_acceptor']]
-        cur_fret_distance_restraint_peak_assignment_id = list_peak_assignments[list_of_object_indices[i]['Peak_assignment']]
+        cur_fret_distance_restraint_peak_assignment_id = None if (list_of_object_indices[i]['Peak_assignment'] == -1) else list_peak_assignments[list_of_object_indices[i]['Peak_assignment']]
         cur_fret_distance_restraint_analysis_id = list_fret_analysis[list_of_object_indices[i]['FRET_analysis']]
         cur_fret_distance_restraint = ihm.flr.FRETDistanceRestraint(sample_probe_1 = cur_fret_distance_restraint_sample_probe_id_1,
                                                                       sample_probe_2 = cur_fret_distance_restraint_sample_probe_id_2,
@@ -2050,8 +3196,6 @@ def do(excel_filename, cifout_filename, atom_site_filename):
             list_flr_model_distances.append(cur_flr_fret_model_distance)
 
 
-
-
     ###### GENERAL
     FLR_collection1 = ihm.flr.FLRData()
     ## add Fret distance restraints
@@ -2076,6 +3220,16 @@ def do(excel_filename, cifout_filename, atom_site_filename):
         FLR_collection1.fret_model_distances.append(entry)
 
     system.flr_data = [FLR_collection1]
+
+    ## Check for struct_assemblies that were not used elsewhere and add them to the system.orphan_assemblies
+    seen_assemblies = []
+    for entry in list_ihm_modeling_protocol_analysis_steps:
+        seen_assemblies.append(entry.assembly)
+    for entry in list_ihm_modeling_protocol_modeling_steps:
+        seen_assemblies.append(entry.assembly)
+    for entry in list_structure_assemblies:
+        if not occurs_in_list(entry, seen_assemblies):
+            system.orphan_assemblies.append(entry)
 
     ###### atom_site ######
     #### Handle the atom_site entries
@@ -2328,7 +3482,7 @@ def main(excel_filename, cifout_filename, atom_site_filename):
 
     ## For debugging: use default values
     if DEBUG:
-        excel_filename = 'excel_template.xlsx'
+        excel_filename = 'excel_example.xlsx'
         cifout_filename = 'sample_output.cif'
         atom_site_filename = 'atom_site_input_example.cif'
     do(excel_filename = excel_filename, cifout_filename = cifout_filename, atom_site_filename=atom_site_filename)
