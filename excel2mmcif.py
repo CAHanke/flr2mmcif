@@ -186,6 +186,10 @@ def do(excel_filename, cifout_filename, atom_site_filename):
     list_dataset_subgroup_by_dataset_list_id_ids = []
     ## store the external reference ids as well for later connection to the external files
     list_dataset_external_reference_ids = []
+    ## connect datasets with external files; stores datasets and the respective external_file ids
+    list_connection_dataset_external_file_datasets = []
+    list_connection_dataset_external_file_ids = []
+    ##
     list_repositories = []
     list_repository_ids = []
     ## Store the datasets that belong to one group and create the dataset_group later
@@ -207,7 +211,7 @@ def do(excel_filename, cifout_filename, atom_site_filename):
         ## required to create the dataset of the correct type
         cur_ihm_dataset_data_type = xls_ihm_dataset_data['IHM_Dataset_Data_type'][i]
         ## required for the creation of the database location
-        cur_ihm_dataset_DB_flag = xls_ihm_dataset_data['IHM_Dataset_DB_flag'][i] == 'YES'
+        cur_ihm_dataset_DB_flag = xls_ihm_dataset_data['IHM_Dataset_DB_flag'][i] in ['Yes','YES','yes']
         cur_ihm_dataset_DB_name = xls_ihm_dataset_data['IHM_Dataset_DB_name'][i]
         cur_ihm_dataset_DB_accession_code = xls_ihm_dataset_data['IHM_Dataset_DB_accession_code'][i]
         cur_ihm_dataset_DB_version = None if ('IHM_Dataset_DB_version' not in xls_ihm_dataset_data.keys() or pandas.isnull(xls_ihm_dataset_data['IHM_Dataset_DB_version'][i])) else xls_ihm_dataset_data['IHM_Dataset_DB_version'][i]
@@ -360,12 +364,17 @@ def do(excel_filename, cifout_filename, atom_site_filename):
             if cur_dataset not in tmp_list_for_dataset_subgroups[cur_ihm_external_files_reference_id]:
                 tmp_list_for_dataset_subgroups[cur_ihm_external_files_reference_id].append(cur_dataset)
 
+        ## store the connection between datasets and external file ordinal ids
+        if cur_dataset is not None:
+            list_connection_dataset_external_file_datasets.append(cur_dataset)
+            list_connection_dataset_external_file_ids.append(cur_ihm_external_files_ordinal)
+
     ## Go through the Dataset entries again to collect all the external references belonging to one of the dataset groups
     ## This is important because an external file could be used in multiple dataset groups
     ## Only if external files are present at all.
     for i in range(nr_of_entries_ihm_dataset):
         cur_ihm_dataset_group = xls_ihm_dataset_data['IHM_Dataset_Dataset_group'][i]
-        cur_ihm_dataset_DB_flag = xls_ihm_dataset_data['IHM_Dataset_DB_flag'][i] == 'YES'
+        cur_ihm_dataset_DB_flag = xls_ihm_dataset_data['IHM_Dataset_DB_flag'][i] in ['Yes','YES','yes']
         cur_ihm_dataset_external_reference_id = xls_ihm_dataset_data['IHM_Dataset_External_reference_id'][i]
         ## Only if the dataset entry has an external file and is not in a database
         if not cur_ihm_dataset_DB_flag:
@@ -595,6 +604,8 @@ def do(excel_filename, cifout_filename, atom_site_filename):
         cur_ihm_instance_starting_model_chain_id = xls_ihm_instance_data['IHM_Instance_Starting_model_chain_id'][i]
         cur_ihm_instance_starting_model_sequence_offset = None if ('IHM_Instance_Starting_model_sequence_offset' not in xls_ihm_instance_data.keys()) else (0 if (pandas.isnull(xls_ihm_instance_data['IHM_Instance_Starting_model_sequence_offset'][i])) else int(xls_ihm_instance_data['IHM_Instance_Starting_model_sequence_offset'][i]))
         cur_ihm_instance_starting_model_dataset_list_id = xls_ihm_instance_data['IHM_Instance_Starting_model_dataset_list_id'][i]
+        ## Use external_file_id if available
+        cur_ihm_instance_starting_model_external_file_id = None if ('IHM_Instance_Starting_model_external_file_id' not in xls_ihm_instance_data.keys() or pandas.isnull(xls_ihm_instance_data['IHM_Instance_Starting_model_external_file_id'][i])) else xls_ihm_instance_data['IHM_Instance_Starting_model_external_file_id'][i]
 
         #### Asym Units
         ## get the respective entity
@@ -618,7 +629,11 @@ def do(excel_filename, cifout_filename, atom_site_filename):
         if cur_ihm_instance_starting_model_id is not None:
             if cur_ihm_instance_starting_model_source == 'comparative model':
                 cur_templates = tmp_list_templates_for_starting_models[cur_ihm_instance_starting_model_id]
-            cur_starting_model = ihm.startmodel.StartingModel(list_asym_unit_ranges[list_asym_unit_ranges.index(cur_asym_unit_range)], dataset = list_datasets[list_dataset_ids.index(cur_ihm_instance_starting_model_dataset_list_id)], asym_id = cur_ihm_instance_starting_model_chain_id,offset=cur_ihm_instance_starting_model_sequence_offset, templates = cur_templates)
+            ## use the external file dataset list id if available
+            if cur_ihm_instance_starting_model_external_file_id is not None:
+                cur_starting_model = ihm.startmodel.StartingModel(list_asym_unit_ranges[list_asym_unit_ranges.index(cur_asym_unit_range)], dataset = list_connection_dataset_external_file_datasets[list_connection_dataset_external_file_ids.index(cur_ihm_instance_starting_model_external_file_id)], asym_id = cur_ihm_instance_starting_model_chain_id,offset=cur_ihm_instance_starting_model_sequence_offset, templates = cur_templates)
+            else:
+                cur_starting_model = ihm.startmodel.StartingModel(list_asym_unit_ranges[list_asym_unit_ranges.index(cur_asym_unit_range)], dataset = list_datasets[list_dataset_ids.index(cur_ihm_instance_starting_model_dataset_list_id)], asym_id = cur_ihm_instance_starting_model_chain_id,offset=cur_ihm_instance_starting_model_sequence_offset, templates = cur_templates)
 
         #### model_representation
         ## !!! Note: Only by-atom tested so far
