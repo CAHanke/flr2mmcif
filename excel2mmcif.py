@@ -94,6 +94,15 @@ def do(excel_filename, cifout_filename, atom_site_filename):
     ## List of Residue and Atom objects
     list_resatoms = []
 
+    ######### General #########
+    if BEVERBOSE:
+        print(' ... Processing tab \'General\' ...' )
+    xls_general_data = pandas.read_excel(xls_file, sheet_name='General',skiprows=3,header=0)
+    nr_of_entries_general = len(xls_general_data['IHM_Struct_id'])
+    for i in range(nr_of_entries_general):
+        cur_general_title = None if ('IHM_Struct_title' not in xls_general_data.keys() or pandas.isnull(xls_general_data['IHM_Struct_title'][i])) else xls_general_data['IHM_Struct_title'][i]
+        system.title = cur_general_title
+
     ######### Citation #########
     if BEVERBOSE:
         print(' ... Processing tab \'Citation\' ... ')
