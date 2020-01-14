@@ -16,7 +16,7 @@ The script requires Python3 with ihm, pandas, and xlrd installed.
 
 #### 2. Prepare an mmcif file for the atomic coordinates for the structural models.
   * Please make sure that the atomic coordinates are provided in the order of the models in the *Models* tab in the excel sheet. This will not be checked by the conversion script.
-  * Only the _atom_site entries of this mmcif file matter, as other entries are ignored.
+  * The mmcif file must at least contain _atom_site entries. Additionally, _ihm_model_list, _ihm_model_group and _ihm_model_group_link entries can be provided and will then be used.
 
 #### 3. Run the python script, e.g.
 
