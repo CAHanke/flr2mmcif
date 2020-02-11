@@ -3188,8 +3188,8 @@ def do(excel_filename, cifout_filename, atom_site_filename):
         cur_flr_model_quality_model_id = xls_flr_model_quality_data['FLR_FRET_model_quality_Model_id'][i]
         cur_flr_model_quality_chi_square_reduced = xls_flr_model_quality_data['FLR_FRET_model_quality_Chi_square_reduced'][i]
         cur_flr_model_quality_dataset_group_id = xls_flr_model_quality_data['FLR_FRET_model_quality_dataset_group_id'][i]
-        cur_flr_model_quality_method = None if ('FLR_model_quality_Method' not in xls_flr_model_quality_data.keys() or pandas.isnull(xls_flr_model_quality_data['FLR_FRET_model_quality_Method'][i])) else xls_flr_model_quality_data['FLR_model_quality_Method'][i]
-        cur_flr_model_quality_details = None if ('FLR_model_quality_details' not in xls_flr_model_quality_data.keys() or pandas.isnull(xls_flr_model_quality_data['FLR_FRET_model_quality_details'][i])) else xls_flr_model_quality_data['FLR_model_quality_details'][i]
+        cur_flr_model_quality_method = None if ('FLR_FRET_model_quality_Method' not in xls_flr_model_quality_data.keys() or pandas.isnull(xls_flr_model_quality_data['FLR_FRET_model_quality_Method'][i])) else xls_flr_model_quality_data['FLR_FRET_model_quality_Method'][i]
+        cur_flr_model_quality_details = None if ('FLR_FRET_model_quality_details' not in xls_flr_model_quality_data.keys() or pandas.isnull(xls_flr_model_quality_data['FLR_FRET_model_quality_details'][i])) else xls_flr_model_quality_data['FLR_FRET_model_quality_details'][i]
 
         cur_flr_model_quality = ihm.flr.FRETModelQuality(model = list_models[list_models_ids.index(cur_flr_model_quality_model_id)],
                                                            chi_square_reduced = cur_flr_model_quality_chi_square_reduced,
