@@ -2984,13 +2984,13 @@ def do(excel_filename, cifout_filename, atom_site_filename):
     list_FPS_modeling_by_AV = []
     for i in range(nr_of_entries_flr):
         ## for each modeling step that include FPS
-        for this_ihm_modeling_protcol_id in list_ihm_modeling_protocols:
-            for this_step in this_ihm_modeling_protcol_id.steps:
+        for this_ihm_modeling_protocol_id in list_ihm_modeling_protocols:
+            for this_step in this_ihm_modeling_protocol_id.steps:
                 if 'FPS' in this_step.software.name:
 
                     ## the fps global parameters are stored by protocol id and then by step id
                     ## to get to this, we have to go via the protocol id that is stored in list_ihm_modeling_protocols_ids
-                    this_fps_global_parameters = list_flr_fps_global_parameters_by_protocol_id[list_ihm_modeling_protocols_ids[list_ihm_modeling_protocols.index(this_ihm_modeling_protcol_id)]][list_ihm_modeling_protocol_modeling_step_ids[list_ihm_modeling_protocol_modeling_steps.index(this_step)]]
+                    this_fps_global_parameters = list_flr_fps_global_parameters_by_protocol_id[list_ihm_modeling_protocols_ids[list_ihm_modeling_protocols.index(this_ihm_modeling_protocol_id)]][list_ihm_modeling_protocol_modeling_step_ids[list_ihm_modeling_protocol_modeling_steps.index(this_step)]]
                     ## donor
                     if 'AV_modeling_method_donor' in list_of_object_indices[i].keys():
                         cur_FPS_modeling_AV = ihm.flr.FPSModeling(protocol=this_step,
@@ -3104,12 +3104,12 @@ def do(excel_filename, cifout_filename, atom_site_filename):
     list_FPS_modeling_by_MPP = []
     for i in range(nr_of_entries_flr):
         ## for each modeling step that include FPS
-        for this_ihm_modeling_protcol_id in list_ihm_modeling_protocols:
-            for this_step in this_ihm_modeling_protcol_id.steps:
+        for this_ihm_modeling_protocol_id in list_ihm_modeling_protocols:
+            for this_step in this_ihm_modeling_protocol_id.steps:
                 if 'FPS' in this_step.software.name:
                     ## the fps global parameters are stored by protocol id and then by step id
                     ## to get to this, we have to go via the protocol id that is stored in list_ihm_modeling_protocols_ids
-                    this_fps_global_parameters = list_flr_fps_global_parameters_by_protocol_id[list_ihm_modeling_protocols_ids[list_ihm_modeling_protocols.index(this_ihm_modeling_protcol_id)]][list_ihm_modeling_protocol_modeling_step_ids[list_ihm_modeling_protocol_modeling_steps.index(this_step)]]
+                    this_fps_global_parameters = list_flr_fps_global_parameters_by_protocol_id[list_ihm_modeling_protocols_ids[list_ihm_modeling_protocols.index(this_ihm_modeling_protocol_id)]][list_ihm_modeling_protocol_modeling_step_ids[list_ihm_modeling_protocol_modeling_steps.index(this_step)]]
 
                     ## donor
                     if 'FPS_mean_probe_position_donor' in list_of_object_indices[i].keys():
