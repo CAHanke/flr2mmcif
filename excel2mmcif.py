@@ -2986,7 +2986,7 @@ def do(excel_filename, cifout_filename, atom_site_filename):
         ## for each modeling step that include FPS
         for this_ihm_modeling_protocol_id in list_ihm_modeling_protocols:
             for this_step in this_ihm_modeling_protocol_id.steps:
-                if 'FPS' in this_step.software.name:
+                if 'FPS' in this_step.software.name or 'Olga' in this_step.software.name:
 
                     ## the fps global parameters are stored by protocol id and then by step id
                     ## to get to this, we have to go via the protocol id that is stored in list_ihm_modeling_protocols_ids
@@ -3106,7 +3106,7 @@ def do(excel_filename, cifout_filename, atom_site_filename):
         ## for each modeling step that include FPS
         for this_ihm_modeling_protocol_id in list_ihm_modeling_protocols:
             for this_step in this_ihm_modeling_protocol_id.steps:
-                if 'FPS' in this_step.software.name:
+                if 'FPS' in this_step.software.name or 'Olga' in this_step.software.name:
                     ## the fps global parameters are stored by protocol id and then by step id
                     ## to get to this, we have to go via the protocol id that is stored in list_ihm_modeling_protocols_ids
                     this_fps_global_parameters = list_flr_fps_global_parameters_by_protocol_id[list_ihm_modeling_protocols_ids[list_ihm_modeling_protocols.index(this_ihm_modeling_protocol_id)]][list_ihm_modeling_protocol_modeling_step_ids[list_ihm_modeling_protocol_modeling_steps.index(this_step)]]
