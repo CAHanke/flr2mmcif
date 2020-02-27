@@ -2,7 +2,7 @@
 ## implementation to generate the objects and write the mmcif file in the end
 ## Christian Hanke 11.03.2019
 ## christian.hanke@hhu.de
-## version 1.03
+## version 1.04
 
 ## Note: In case of non-mandatory parameters, it should be checked whether the column is present at all or whether the respective cell in the excel sheet is empty (using pandas.isnull).
 
@@ -892,16 +892,17 @@ def do(excel_filename, cifout_filename, atom_site_filename):
         tmp_list_collect_for_multi_state[cur_ihm_multi_state_modeling_state_id]['experiment_type'] = cur_ihm_multi_state_modeling_experiment_type
         tmp_list_collect_for_multi_state[cur_ihm_multi_state_modeling_state_id]['population_fraction'] = cur_ihm_multi_state_modeling_population_fraction
 
-        ## If there is no model_group_ID, then the state will be added with a dummy model group
+        ## If there is no model_group_ID, then the state will be added without a model group
         ## This is to allow states, for which distance restraints are derived, but no structural models are deposited
         if cur_ihm_multi_state_modeling_model_group_id is None:
-            dummy_model_group = ihm.model.ModelGroup(elements = [])
-            cur_state = ihm.model.State(elements = [dummy_model_group],
+#            dummy_model_group = ihm.model.ModelGroup(elements = [])
+            cur_state = ihm.model.State(elements = [],
                                         type = cur_ihm_multi_state_modeling_state_type,
                                         name = cur_ihm_multi_state_modeling_state_name,
                                         details = cur_ihm_multi_state_modeling_state_details,
                                         experiment_type = cur_ihm_multi_state_modeling_experiment_type,
                                         population_fraction = cur_ihm_multi_state_modeling_population_fraction)
+
             if cur_state not in list_empty_states:
                 list_empty_states.append(cur_state)
                 list_empty_state_ids.append(cur_ihm_multi_state_modeling_state_id)
@@ -1169,6 +1170,8 @@ def do(excel_filename, cifout_filename, atom_site_filename):
     list_experiments = []
     ## Chemical descriptors
     list_chemical_descriptors = []
+    ## Chemical components
+    list_chemical_components = []
     ## Probes
     list_probe_donors = []
     list_probe_acceptors = []
@@ -1740,116 +1743,117 @@ def do(excel_filename, cifout_filename, atom_site_filename):
         #### Mutated residues
         for i in range(nr_of_entries_refmeas):
             if list_ref_measurement_contains_donor_info[i]:
-                if ('RefMeas_Mutated_residue_donor_name' in xls_refmeas_data.keys()
-                    and not pandas.isnull(xls_refmeas_data['RefMeas_Mutated_residue_donor_name'][i])) and \
-                        (('RefMeas_Mutated_residue_donor_smiles' in xls_refmeas_data.keys()
-                         and not pandas.isnull(xls_refmeas_data['RefMeas_Mutated_residue_donor_smiles'][i]))
-                        or ('RefMeas_Mutated_residue_donor_smiles_canonical' in xls_refmeas_data.keys()
-                            and not pandas.isnull(xls_refmeas_data['RefMeas_Mutated_residue_donor_smiles_canonical'][i]))
-                        or ('RefMeas_Mutated_residue_donor_inchi' in xls_refmeas_data.keys()
-                            and not pandas.isnull(xls_refmeas_data['RefMeas_Modified_residue_donor_inchi'][i]))
-                        or ('RefMeas_Mutated_residue_donor_inchi_key' in xls_refmeas_data.keys()
-                            and not pandas.isnull(xls_refmeas_data['RefMeas_Modified_residue_donor_inchi_key'][i]))):
-                    cur_mutated_residue_donor_chemical_descriptor = ihm.ChemDescriptor(
-                        auth_name=xls_refmeas_data['RefMeas_Mutated_residue_donor_name'][i],
-                        chem_comp_id=None if (
-                                'RefMeas_Mutated_residue_donor_chem_comp_id' not in xls_refmeas_data.keys()
-                                or pandas.isnull(xls_refmeas_data['RefMeas_Mutated_residue_donor_chem_comp_id'][i]))
-                                    else xls_refmeas_data['RefMeas_Mutated_residue_donor_chem_comp_id'][i],
-                        chemical_name=None if (
-                                'RefMeas_Mutated_residue_donor_chemical_name' not in xls_refmeas_data.keys()
-                                or pandas.isnull(xls_refmeas_data['RefMeas_Mutated_residue_donor_chemical_name'][i]))
-                                    else xls_refmeas_data['RefMeas_Mutated_residue_donor_chemical_name'][i],
-                        common_name=None if (
-                                'RefMeas_Mutated_residue_donor_common_name' not in xls_refmeas_data.keys()
-                                or pandas.isnull(xls_refmeas_data['RefMeas_Mutated_residue_donor_common_name'][i]))
-                                    else xls_refmeas_data['RefMeas_Mutated_residue_donor_common_name'][i],
-                        smiles=None if (
-                                'RefMeas_Mutated_residue_donor_smiles' not in xls_refmeas_data.keys()
-                                or pandas.isnull(xls_refmeas_data['RefMeas_Mutated_residue_donor_smiles'][i]))
-                                    else xls_refmeas_data['RefMeas_Mutated_residue_donor_smiles'][i],
-                        smiles_canonical=None if (
-                                'RefMeas_Mutated_residue_donor_smiles_canonical' not in xls_refmeas_data.keys()
-                                or pandas.isnull(xls_refmeas_data['RefMeas_Mutated_residue_donor_smiles_canonical'][i]))
-                                    else xls_refmeas_data['RefMeas_Mutated_residue_donor_smiles_canonical'][i],
-                        inchi=None if (
-                                'RefMeas_Mutated_residue_donor_inchi' not in xls_refmeas_data.keys()
-                                or pandas.isnull(xls_refmeas_data['RefMeas_Mutated_residue_donor_inchi'][i]))
-                                    else xls_refmeas_data['RefMeas_Mutated_residue_donor_inchi'][i],
-                        inchi_key=None if (
-                                'RefMeas_Mutated_residue_donor_inchi_key' not in xls_refmeas_data.keys()
-                                or pandas.isnull(xls_refmeas_data['RefMeas_Mutated_residue_donor_inchi_key'][i]))
-                                    else xls_refmeas_data['RefMeas_Mutated_residue_donor_inchi_key'][i])
-
-                    if not occurs_in_list(cur_mutated_residue_donor_chemical_descriptor, list_chemical_descriptors):
-                        list_chemical_descriptors.append(cur_mutated_residue_donor_chemical_descriptor)
+                if ('RefMeas_Mutated_residue_donor_ChemComp_ID' in xls_refmeas_data.keys()
+                    and not pandas.isnull(xls_refmeas_data['RefMeas_Mutated_residue_donor_ChemComp_ID'][i])):
+                    cur_mutated_residue_donor_chemcomp_id = xls_refmeas_data['RefMeas_Mutated_residue_donor_ChemComp_ID'][i]
+                    cur_mutated_residue_donor_code = None if (
+                            'RefMeas_Mutated_residue_donor_Code' not in xls_refmeas_data.keys()
+                            or pandas.isnull(xls_refmeas_data['RefMeas_Mutated_residue_donor_Code'][i])) \
+                        else xls_refmeas_data['RefMeas_Mutated_residue_donor_Code'][i]
+                    cur_mutated_residue_donor_code_canonical = None if (
+                            'RefMeas_Mutated_residue_donor_Code_canonical' not in xls_refmeas_data.keys()
+                            or pandas.isnull(xls_refmeas_data['RefMeas_Mutated_residue_donor_Code_canonical'][i])) \
+                        else xls_refmeas_data['RefMeas_Mutated_residue_donor_Code_canonical'][i]
+                    cur_mutated_residue_donor_type = None if (
+                            'RefMeas_Mutated_residue_donor_Type' not in xls_refmeas_data.keys()
+                            or pandas.isnull(xls_refmeas_data['RefMeas_Mutated_residue_donor_Type'][i])) \
+                        else xls_refmeas_data['RefMeas_Mutated_residue_donor_Type'][i]
+                    cur_mutated_residue_donor_chem_comp = None
+                    if cur_mutated_residue_donor_type == 'Peptide linking':
+                        cur_mutated_residue_donor_chem_comp = ihm.PeptideChemComp(id=cur_mutated_residue_donor_chemcomp_id,
+                                                                           code=cur_mutated_residue_donor_code,
+                                                                           code_canonical=cur_mutated_residue_donor_code_canonical)
+                    elif cur_mutated_residue_donor_type == 'L-Peptide linking':
+                        cur_mutated_residue_donor_chem_comp = ihm.LPeptideChemComp(id=cur_mutated_residue_donor_chemcomp_id,
+                                                                           code=cur_mutated_residue_donor_code,
+                                                                           code_canonical=cur_mutated_residue_donor_code_canonical)
+                    elif cur_mutated_residue_donor_type == 'D-Peptide linking':
+                        cur_mutated_residue_donor_chem_comp = ihm.DPeptideChemComp(id=cur_mutated_residue_donor_chemcomp_id,
+                                                                           code=cur_mutated_residue_donor_code,
+                                                                           code_canonical=cur_mutated_residue_donor_code_canonical)
+                    elif cur_mutated_residue_donor_type == 'DNA linking':
+                        cur_mutated_residue_donor_chem_comp = ihm.DNAChemComp(id=cur_mutated_residue_donor_chemcomp_id,
+                                                                           code=cur_mutated_residue_donor_code,
+                                                                           code_canonical=cur_mutated_residue_donor_code_canonical)
+                    elif cur_mutated_residue_donor_type == 'RNA linking':
+                        cur_mutated_residue_donor_chem_comp = ihm.RNAChemComp(id=cur_mutated_residue_donor_chemcomp_id,
+                                                                           code=cur_mutated_residue_donor_code,
+                                                                           code_canonical=cur_mutated_residue_donor_code_canonical)
                     else:
-                        cur_mutated_residue_donor_chemical_descriptor = [
-                            x for x in list_chemical_descriptors if
-                            x.__dict__ == cur_mutated_residue_donor_chemical_descriptor.__dict__][0]
+                        cur_mutated_residue_donor_chem_comp = ihm.ChemComp(id = cur_mutated_residue_donor_chemcomp_id,
+                                                                           code = cur_mutated_residue_donor_code,
+                                                                           code_canonical = cur_mutated_residue_donor_code_canonical)
+
+                    if not occurs_in_list(cur_mutated_residue_donor_chem_comp, list_chemical_components):
+                        list_chemical_components.append(cur_mutated_residue_donor_chem_comp)
+                    else:
+                        cur_mutated_residue_donor_chem_comp = [
+                            x for x in list_chemical_components if
+                            x.__dict__ == cur_mutated_residue_donor_chem_comp.__dict__][0]
 
                     cur_mutated_residue_donor_index = -1
-                    if not occurs_in_list(cur_mutated_residue_donor_chemical_descriptor, list_mutated_residues):
-                        list_mutated_residues.append(cur_mutated_residue_donor_chemical_descriptor)
+                    if not occurs_in_list(cur_mutated_residue_donor_chem_comp, list_mutated_residues):
+                        list_mutated_residues.append(cur_mutated_residue_donor_chem_comp)
                     cur_mutated_residue_donor_index = list_mutated_residues.index(
-                        cur_mutated_residue_donor_chemical_descriptor)
+                        cur_mutated_residue_donor_chem_comp)
                     list_of_object_indices_refmeas[i]['Mutated_residue_donor'] = cur_mutated_residue_donor_index
 
         ## acceptor
         for i in range(nr_of_entries_refmeas):
             if list_ref_measurement_contains_acceptor_info[i]:
-                if ('RefMeas_Mutated_residue_acceptor_name' in xls_refmeas_data.keys()
-                    and not pandas.isnull(xls_refmeas_data['RefMeas_Mutated_residue_acceptor_name'][i])) and \
-                        (('RefMeas_Mutated_residue_acceptor_smiles' in xls_refmeas_data.keys()
-                         and not pandas.isnull(xls_refmeas_data['RefMeas_Mutated_residue_acceptor_smiles'][i]))
-                        or ('RefMeas_Mutated_residue_acceptor_smiles_canonical' in xls_refmeas_data.keys()
-                            and not pandas.isnull(xls_refmeas_data['RefMeas_Mutated_residue_acceptor_smiles_canonical'][i]))
-                        or ('RefMeas_Mutated_residue_acceptor_inchi' in xls_refmeas_data.keys()
-                            and not pandas.isnull(xls_refmeas_data['RefMeas_Mutated_residue_acceptor_inchi'][i]))
-                        or ('RefMeas_Mutated_residue_acceptor_inchi_key' in xls_refmas_data.keys()
-                            and not pandas.isnull(xls_refmeas_data['RefMeas_Mutated_residue_acceptor_inchi_key'][i]))):
-                    cur_mutated_residue_acceptor_chemical_descriptor = ihm.ChemDescriptor(
-                        auth_name=xls_refmeas_data['RefMeas_Mutated_residue_acceptor_name'][i],
-                        chem_comp_id=None if (
-                                'RefMeas_Mutated_residue_acceptor_chem_comp_id' not in xls_refmeas_data.keys()
-                                or pandas.isnull(xls_refmeas_data['RefMeas_Mutated_residue_acceptor_chem_comp_id'][i]))
-                                    else xls_refmeas_data['RefMeas_Mutated_residue_acceptor_chem_comp_id'][i],
-                        chemical_name=None if (
-                                'RefMeas_Mutated_residue_acceptor_chemical_name' not in xls_refmeas_data.keys()
-                                or pandas.isnull(xls_refmeas_data['RefMeas_Mutated_residue_acceptor_chemical_name'][i]))
-                                    else xls_refmeas_data['RefMeas_Mutated_residue_acceptor_chemical_name'][i],
-                        common_name=None if (
-                                'RefMeas_Mutated_residue_acceptor_common_name' not in xls_refmeas_data.keys()
-                                or pandas.isnull(xls_refmeas_data['RefMeas_Mutated_residue_acceptor_common_name'][i]))
-                                    else xls_refmeas_data['RefMeas_Mutated_residue_acceptor_common_name'][i],
-                        smiles=None if (
-                                'RefMeas_Mutated_residue_acceptor_smiles' not in xls_refmeas_data.keys()
-                                or pandas.isnull(xls_refmeas_data['RefMeas_Mutated_residue_acceptor_smiles'][i]))
-                                    else xls_refmeas_data['RefMeas_Mutated_residue_acceptor_smiles'][i],
-                        smiles_canonical=None if (
-                                'RefMeas_Mutated_residue_acceptor_smiles_canonical' not in xls_refmeas_data.keys()
-                                or pandas.isnull(xls_refmeas_data['RefMeas_Mutated_residue_acceptor_smiles_canonical'][i]))
-                                    else xls_refmeas_data['RefMeas_Mutated_residue_acceptor_smiles_canonical'][i],
-                        inchi=None if (
-                                'RefMeas_Mutated_residue_acceptor_inchi' not in xls_refmeas_data.keys()
-                                or pandas.isnull(xls_refmeas_data['RefMeas_Mutated_residue_acceptor_inchi'][i]))
-                                    else xls_refmeas_data['RefMeas_Mutated_residue_acceptor_inchi'][i],
-                        inchi_key=None if (
-                                'RefMeas_Mutated_residue_acceptor_inchi_key' not in xls_refmeas_data.keys()
-                                or pandas.isnull(xls_refmeas_data['RefMeas_Mutated_residue_acceptor_inchi_key'][i]))
-                                    else xls_refmeas_data['RefMeas_Mutated_residue_acceptor_inchi_key'][i])
-                    if not occurs_in_list(cur_mutated_residue_acceptor_chemical_descriptor, list_chemical_descriptors):
-                        list_chemical_descriptors.append(cur_mutated_residue_acceptor_chemical_descriptor)
+                if ('RefMeas_Mutated_residue_acceptor_ChemComp_ID' in xls_refmeas_data.keys()
+                    and not pandas.isnull(xls_refmeas_data['RefMeas_Mutated_residue_acceptor_ChemComp_ID'][i])):
+                    cur_mutated_residue_acceptor_chemcomp_id = xls_refmeas_data['RefMeas_Mutated_residue_acceptor_ChemComp_ID'][i]
+                    cur_mutated_residue_acceptor_code = None if (
+                            'RefMeas_Mutated_residue_acceptor_Code' not in xls_refmeas_data.keys()
+                            or pandas.isnull(xls_refmeas_data['RefMeas_Mutated_residue_acceptor_Code'][i])) \
+                        else xls_refmeas_data['RefMeas_Mutated_residue_acceptor_Code'][i]
+                    cur_mutated_residue_acceptor_code_canonical = None if (
+                            'RefMeas_Mutated_residue_acceptor_Code_canonical' not in xls_refmeas_data.keys()
+                            or pandas.isnull(xls_refmeas_data['RefMeas_Mutated_residue_acceptor_Code_canonical'][i])) \
+                        else xls_refmeas_data['RefMeas_Mutated_residue_acceptor_Code_canonical'][i]
+                    cur_mutated_residue_acceptor_type = None if (
+                            'RefMeas_Mutated_residue_acceptor_Type' not in xls_refmeas_data.keys()
+                            or pandas.isnull(xls_refmeas_data['RefMeas_Mutated_residue_acceptor_Type'][i])) \
+                        else xls_refmeas_data['RefMeas_Mutated_residue_acceptor_Type'][i]
+                    cur_mutated_residue_acceptor_chem_comp = None
+                    if cur_mutated_residue_acceptor_type == 'Peptide linking':
+                        cur_mutated_residue_acceptor_chem_comp = ihm.PeptideChemComp(id=cur_mutated_residue_acceptor_chemcomp_id,
+                                                                           code=cur_mutated_residue_acceptor_code,
+                                                                           code_canonical=cur_mutated_residue_acceptor_code_canonical)
+                    elif cur_mutated_residue_acceptor_type == 'L-Peptide linking':
+                        cur_mutated_residue_acceptor_chem_comp = ihm.LPeptideChemComp(id=cur_mutated_residue_acceptor_chemcomp_id,
+                                                                           code=cur_mutated_residue_acceptor_code,
+                                                                           code_canonical=cur_mutated_residue_acceptor_code_canonical)
+                    elif cur_mutated_residue_acceptor_type == 'D-Peptide linking':
+                        cur_mutated_residue_acceptor_chem_comp = ihm.DPeptideChemComp(id=cur_mutated_residue_acceptor_chemcomp_id,
+                                                                           code=cur_mutated_residue_acceptor_code,
+                                                                           code_canonical=cur_mutated_residue_acceptor_code_canonical)
+                    elif cur_mutated_residue_acceptor_type == 'DNA linking':
+                        cur_mutated_residue_acceptor_chem_comp = ihm.DNAChemComp(id=cur_mutated_residue_acceptor_chemcomp_id,
+                                                                           code=cur_mutated_residue_acceptor_code,
+                                                                           code_canonical=cur_mutated_residue_acceptor_code_canonical)
+                    elif cur_mutated_residue_acceptor_type == 'RNA linking':
+                        cur_mutated_residue_acceptor_chem_comp = ihm.RNAChemComp(id=cur_mutated_residue_acceptor_chemcomp_id,
+                                                                           code=cur_mutated_residue_acceptor_code,
+                                                                           code_canonical=cur_mutated_residue_acceptor_code_canonical)
                     else:
-                        cur_mutated_residue_acceptor_chemical_descriptor = [
-                            x for x in list_chemical_descriptors if
-                            x.__dict__ == cur_mutated_residue_acceptor_chemical_descriptor.__dict__][0]
+                        cur_mutated_residue_acceptor_chem_comp = ihm.ChemComp(id = cur_mutated_residue_acceptor_chemcomp_id,
+                                                                           code = cur_mutated_residue_acceptor_code,
+                                                                           code_canonical = cur_mutated_residue_acceptor_code_canonical)
+
+                    if not occurs_in_list(cur_mutated_residue_acceptor_chem_comp, list_chemical_components):
+                        list_chemical_components.append(cur_mutated_residue_acceptor_chem_comp)
+                    else:
+                        cur_mutated_residue_acceptor_chem_comp = [
+                            x for x in list_chemical_components if
+                            x.__dict__ == cur_mutated_residue_acceptor_chem_comp.__dict__][0]
 
                     cur_mutated_residue_acceptor_index = -1
-                    if not occurs_in_list(cur_mutated_residue_acceptor_chemical_descriptor, list_mutated_residues):
-                        list_mutated_residues.append(cur_mutated_residue_acceptor_chemical_descriptor)
+                    if not occurs_in_list(cur_mutated_residue_acceptor_chem_comp, list_mutated_residues):
+                        list_mutated_residues.append(cur_mutated_residue_acceptor_chem_comp)
                     cur_mutated_residue_acceptor_index = list_mutated_residues.index(
-                        cur_mutated_residue_acceptor_chemical_descriptor)
+                        cur_mutated_residue_acceptor_chem_comp)
                     list_of_object_indices_refmeas[i]['Mutated_residue_acceptor'] = cur_mutated_residue_acceptor_index
 
         ###### Poly_probe_position
@@ -1897,7 +1901,7 @@ def do(excel_filename, cifout_filename, atom_site_filename):
                         mutation_flag=cur_poly_probe_position_mutation_flag,
                         modification_flag=cur_poly_probe_position_modification_flag,
                         auth_name=cur_poly_probe_position_auth_name,
-                        mutated_chem_descriptor=None if (('Mutated_residue_donor' not in list_of_object_indices_refmeas[i].keys())
+                        mutated_chem_comp_id=None if (('Mutated_residue_donor' not in list_of_object_indices_refmeas[i].keys())
                                                         or cur_poly_probe_position_mutation_flag == False)
                                                 else list_mutated_residues[list_of_object_indices_refmeas[i]['Mutated_residue_donor']],
                         modified_chem_descriptor=None if (('Modified_residue_donor' not in list_of_object_indices_refmeas[i].keys())
@@ -1954,7 +1958,7 @@ def do(excel_filename, cifout_filename, atom_site_filename):
                     mutation_flag=cur_poly_probe_position_mutation_flag,
                     modification_flag=cur_poly_probe_position_modification_flag,
                     auth_name=cur_poly_probe_position_auth_name,
-                    mutated_chem_descriptor=None if
+                    mutated_chem_comp_id=None if
                         (('Mutated_residue_acceptor' not in list_of_object_indices_refmeas[i].keys())
                             or cur_poly_probe_position_mutation_flag == False) else
                                 list_mutated_residues[list_of_object_indices_refmeas[i]['Mutated_residue_acceptor']],
@@ -2531,48 +2535,118 @@ def do(excel_filename, cifout_filename, atom_site_filename):
             list_of_object_indices[i]['Modified_residue_acceptor'] = cur_modified_residue_acceptor_index
     #### Mutated residues
     for i in range(nr_of_entries_flr):
-        if ('FLR_Mutated_residue_donor_name' in xls_flr_data.keys() and not pandas.isnull(xls_flr_data['FLR_Mutated_residue_donor_name'][i])) and (('FLR_Mutated_residue_donor_smiles' in xls_flr_data.keys() and not pandas.isnull(xls_flr_data['FLR_Mutated_residue_donor_smiles'][i])) or ('FLR_Mutated_residue_donor_smiles_canonical' in xls_flr_data.keys() and not pandas.isnull(xls_flr_data['FLR_Mutated_residue_donor_smiles_canonical'][i])) or ('FLR_Mutated_residue_donor_inchi' in xls_flr_data.keys() and not pandas.isnull(xls_flr_data['FLR_Modified_residue_donor_inchi'][i])) or ('FLR_Mutated_residue_donor_inchi_key' in xls_flr_data.keys() and not pandas.isnull(xls_flr_data['FLR_Modified_residue_donor_inchi_key'][i]))):
-            cur_mutated_residue_donor_chemical_descriptor = ihm.ChemDescriptor(
-                                                                                    auth_name = xls_flr_data['FLR_Mutated_residue_donor_name'][i],
-                                                                                    chem_comp_id = None if ('FLR_Mutated_residue_donor_chem_comp_id' not in xls_flr_data.keys() or pandas.isnull(xls_flr_data['FLR_Mutated_residue_donor_chem_comp_id'][i])) else xls_flr_data['FLR_Mutated_residue_donor_chem_comp_id'][i],
-                                                                                    chemical_name = None if ('FLR_Mutated_residue_donor_chemical_name' not in xls_flr_data.keys() or pandas.isnull(xls_flr_data['FLR_Mutated_residue_donor_chemical_name'][i])) else xls_flr_data['FLR_Mutated_residue_donor_chemical_name'][i],
-                                                                                    common_name = None if ('FLR_Mutated_residue_donor_common_name' not in xls_flr_data.keys() or pandas.isnull(xls_flr_data['FLR_Mutated_residue_donor_common_name'][i])) else xls_flr_data['FLR_Mutated_residue_donor_common_name'][i],
-                                                                                    smiles = None if ('FLR_Mutated_residue_donor_smiles' not in xls_flr_data.keys() or pandas.isnull(xls_flr_data['FLR_Mutated_residue_donor_smiles'][i])) else xls_flr_data['FLR_Mutated_residue_donor_smiles'][i],
-                                                                                    smiles_canonical = None if ('FLR_Mutated_residue_donor_smiles_canonical' not in xls_flr_data.keys() or pandas.isnull(xls_flr_data['FLR_Mutated_residue_donor_smiles_canonical'][i])) else xls_flr_data['FLR_Mutated_residue_donor_smiles_canonical'][i],
-                                                                                    inchi = None if ('FLR_Mutated_residue_donor_inchi' not in xls_flr_data.keys() or pandas.isnull(xls_flr_data['FLR_Mutated_residue_donor_inchi'][i])) else xls_flr_data['FLR_Mutated_residue_donor_inchi'][i],
-                                                                                    inchi_key = None if ('FLR_Mutated_residue_donor_inchi_key' not in xls_flr_data.keys() or pandas.isnull(xls_flr_data['FLR_Mutated_residue_donor_inchi_key'][i])) else xls_flr_data['FLR_Mutated_residue_donor_inchi_key'][i])
-
-            if not occurs_in_list(cur_mutated_residue_donor_chemical_descriptor, list_chemical_descriptors):
-                list_chemical_descriptors.append(cur_mutated_residue_donor_chemical_descriptor)
+        if ('FLR_Mutated_residue_donor_ChemComp_ID' in xls_flr_data.keys()
+                and not pandas.isnull(xls_flr_data['FLR_Mutated_residue_donor_ChemComp_ID'][i])):
+            cur_mutated_residue_donor_chemcomp_id = xls_flr_data['FLR_Mutated_residue_donor_ChemComp_ID'][i]
+            cur_mutated_residue_donor_code = None if (
+                    'FLR_Mutated_residue_donor_Code' not in xls_flr_data.keys()
+                    or pandas.isnull(xls_flr_data['FLR_Mutated_residue_donor_Code'][i])) \
+                else xls_flr_data['FLR_Mutated_residue_donor_Code'][i]
+            cur_mutated_residue_donor_code_canonical = None if (
+                    'FLR_Mutated_residue_donor_Code_canonical' not in xls_flr_data.keys()
+                    or pandas.isnull(xls_flr_data['FLR_Mutated_residue_donor_Code_canonical'][i])) \
+                else xls_flr_data['FLR_Mutated_residue_donor_Code_canonical'][i]
+            cur_mutated_residue_donor_type = None if (
+                    'FLR_Mutated_residue_donor_Type' not in xls_flr_data.keys()
+                    or pandas.isnull(xls_flr_data['FLR_Mutated_residue_donor_Type'][i])) \
+                else xls_flr_data['FLR_Mutated_residue_donor_Type'][i]
+            cur_mutated_residue_donor_chem_comp = None
+            if cur_mutated_residue_donor_type == 'Peptide linking':
+                cur_mutated_residue_donor_chem_comp = ihm.PeptideChemComp(id=cur_mutated_residue_donor_chemcomp_id,
+                                                                          code=cur_mutated_residue_donor_code,
+                                                                          code_canonical=cur_mutated_residue_donor_code_canonical)
+            elif cur_mutated_residue_donor_type == 'L-Peptide linking':
+                cur_mutated_residue_donor_chem_comp = ihm.LPeptideChemComp(id=cur_mutated_residue_donor_chemcomp_id,
+                                                                           code=cur_mutated_residue_donor_code,
+                                                                           code_canonical=cur_mutated_residue_donor_code_canonical)
+            elif cur_mutated_residue_donor_type == 'D-Peptide linking':
+                cur_mutated_residue_donor_chem_comp = ihm.DPeptideChemComp(id=cur_mutated_residue_donor_chemcomp_id,
+                                                                           code=cur_mutated_residue_donor_code,
+                                                                           code_canonical=cur_mutated_residue_donor_code_canonical)
+            elif cur_mutated_residue_donor_type == 'DNA linking':
+                cur_mutated_residue_donor_chem_comp = ihm.DNAChemComp(id=cur_mutated_residue_donor_chemcomp_id,
+                                                                      code=cur_mutated_residue_donor_code,
+                                                                      code_canonical=cur_mutated_residue_donor_code_canonical)
+            elif cur_mutated_residue_donor_type == 'RNA linking':
+                cur_mutated_residue_donor_chem_comp = ihm.RNAChemComp(id=cur_mutated_residue_donor_chemcomp_id,
+                                                                      code=cur_mutated_residue_donor_code,
+                                                                      code_canonical=cur_mutated_residue_donor_code_canonical)
             else:
-                cur_mutated_residue_donor_chemical_descriptor = [x for x in list_chemical_descriptors if x.__dict__ == cur_mutated_residue_donor_chemical_descriptor.__dict__][0]
+                cur_mutated_residue_donor_chem_comp = ihm.ChemComp(id=cur_mutated_residue_donor_chemcomp_id,
+                                                                   code=cur_mutated_residue_donor_code,
+                                                                   code_canonical=cur_mutated_residue_donor_code_canonical)
+
+            if not occurs_in_list(cur_mutated_residue_donor_chem_comp, list_chemical_components):
+                list_chemical_components.append(cur_mutated_residue_donor_chem_comp)
+            else:
+                cur_mutated_residue_donor_chem_comp = [
+                    x for x in list_chemical_components if
+                    x.__dict__ == cur_mutated_residue_donor_chem_comp.__dict__][0]
 
             cur_mutated_residue_donor_index = -1
-            if not occurs_in_list(cur_mutated_residue_donor_chemical_descriptor, list_mutated_residues):
-                list_mutated_residues.append(cur_mutated_residue_donor_chemical_descriptor)
-            cur_mutated_residue_donor_index = list_mutated_residues.index(cur_mutated_residue_donor_chemical_descriptor)
+            if not occurs_in_list(cur_mutated_residue_donor_chem_comp, list_mutated_residues):
+                list_mutated_residues.append(cur_mutated_residue_donor_chem_comp)
+            cur_mutated_residue_donor_index = list_mutated_residues.index(
+                cur_mutated_residue_donor_chem_comp)
             list_of_object_indices[i]['Mutated_residue_donor'] = cur_mutated_residue_donor_index
+
     ## acceptor
     for i in range(nr_of_entries_flr):
-        if ('FLR_Mutated_residue_acceptor_name' in xls_flr_data.keys() and not pandas.isnull(xls_flr_data['FLR_Mutated_residue_acceptor_name'][i])) and (('FLR_Mutated_residue_acceptor_smiles' in xls_flr_data.keys() and not pandas.isnull(xls_flr_data['FLR_Mutated_residue_acceptor_smiles'][i])) or ('FLR_Mutated_residue_acceptor_smiles_canonical' in xls_flr_data.keys() and not pandas.isnull(xls_flr_data['FLR_Mutated_residue_acceptor_smiles_canonical'][i])) or ('FLR_Mutated_residue_acceptor_inchi' in xls_flr_data.keys() and not pandas.isnull(xls_flr_data['FLR_Mutated_residue_acceptor_inchi'][i])) or ('FLR_Mutated_residue_acceptor_inchi_key' in xls_flr_data.keys() and not pandas.isnull(xls_flr_data['FLR_Mutated_residue_acceptor_inchi_key'][i]))):
-            cur_mutated_residue_acceptor_chemical_descriptor = ihm.ChemDescriptor(
-                                                                                    auth_name = xls_flr_data['FLR_Mutated_residue_acceptor_name'][i],
-                                                                                    chem_comp_id = None if ('FLR_Mutated_residue_acceptor_chem_comp_id' not in xls_flr_data.keys() or pandas.isnull(xls_flr_data['FLR_Mutated_residue_acceptor_chem_comp_id'][i])) else xls_flr_data['FLR_Mutated_residue_acceptor_chem_comp_id'][i],
-                                                                                    chemical_name = None if ('FLR_Mutated_residue_acceptor_chemical_name' not in xls_flr_data.keys() or pandas.isnull(xls_flr_data['FLR_Mutated_residue_acceptor_chemical_name'][i])) else xls_flr_data['FLR_Mutated_residue_acceptor_chemical_name'][i],
-                                                                                    common_name = None if ('FLR_Mutated_residue_acceptor_common_name' not in xls_flr_data.keys() or pandas.isnull(xls_flr_data['FLR_Mutated_residue_acceptor_common_name'][i])) else xls_flr_data['FLR_Mutated_residue_acceptor_common_name'][i],
-                                                                                    smiles = None if ('FLR_Mutated_residue_acceptor_smiles' not in xls_flr_data.keys() or pandas.isnull(xls_flr_data['FLR_Mutated_residue_acceptor_smiles'][i])) else xls_flr_data['FLR_Mutated_residue_acceptor_smiles'][i],
-                                                                                    smiles_canonical = None if ('FLR_Mutated_residue_acceptor_smiles_canonical' not in xls_flr_data.keys() or pandas.isnull(xls_flr_data['FLR_Mutated_residue_acceptor_smiles_canonical'][i])) else xls_flr_data['FLR_Mutated_residue_acceptor_smiles_canonical'][i],
-                                                                                    inchi = None if ('FLR_Mutated_residue_acceptor_inchi' not in xls_flr_data.keys() or pandas.isnull(xls_flr_data['FLR_Mutated_residue_acceptor_inchi'][i])) else xls_flr_data['FLR_Mutated_residue_acceptor_inchi'][i],
-                                                                                    inchi_key = None if ('FLR_Mutated_residue_acceptor_inchi_key' not in xls_flr_data.keys() or pandas.isnull(xls_flr_data['FLR_Mutated_residue_acceptor_inchi_key'][i])) else xls_flr_data['FLR_Mutated_residue_acceptor_inchi_key'][i])
-            if not occurs_in_list(cur_mutated_residue_acceptor_chemical_descriptor, list_chemical_descriptors):
-                list_chemical_descriptors.append(cur_mutated_residue_acceptor_chemical_descriptor)
+        if ('FLR_Mutated_residue_acceptor_ChemComp_ID' in xls_flr_data.keys()
+                and not pandas.isnull(xls_flr_data['FLR_Mutated_residue_acceptor_ChemComp_ID'][i])):
+            cur_mutated_residue_acceptor_chemcomp_id = xls_flr_data['FLR_Mutated_residue_acceptor_ChemComp_ID'][i]
+            cur_mutated_residue_acceptor_code = None if (
+                    'FLR_Mutated_residue_acceptor_Code' not in xls_flr_data.keys()
+                    or pandas.isnull(xls_flr_data['FLR_Mutated_residue_acceptor_Code'][i])) \
+                else xls_flr_data['FLR_Mutated_residue_acceptor_Code'][i]
+            cur_mutated_residue_acceptor_code_canonical = None if (
+                    'FLR_Mutated_residue_acceptor_Code_canonical' not in xls_flr_data.keys()
+                    or pandas.isnull(xls_flr_data['FLR_Mutated_residue_acceptor_Code_canonical'][i])) \
+                else xls_flr_data['FLR_Mutated_residue_acceptor_Code_canonical'][i]
+            cur_mutated_residue_acceptor_type = None if (
+                    'FLR_Mutated_residue_acceptor_Type' not in xls_flr_data.keys()
+                    or pandas.isnull(xls_flr_data['FLR_Mutated_residue_acceptor_Type'][i])) \
+                else xls_flr_data['FLR_Mutated_residue_acceptor_Type'][i]
+            cur_mutated_residue_acceptor_chem_comp = None
+            if cur_mutated_residue_acceptor_type == 'Peptide linking':
+                cur_mutated_residue_acceptor_chem_comp = ihm.PeptideChemComp(
+                    id=cur_mutated_residue_acceptor_chemcomp_id,
+                    code=cur_mutated_residue_acceptor_code,
+                    code_canonical=cur_mutated_residue_acceptor_code_canonical)
+            elif cur_mutated_residue_acceptor_type == 'L-Peptide linking':
+                cur_mutated_residue_acceptor_chem_comp = ihm.LPeptideChemComp(
+                    id=cur_mutated_residue_acceptor_chemcomp_id,
+                    code=cur_mutated_residue_acceptor_code,
+                    code_canonical=cur_mutated_residue_acceptor_code_canonical)
+            elif cur_mutated_residue_acceptor_type == 'D-Peptide linking':
+                cur_mutated_residue_acceptor_chem_comp = ihm.DPeptideChemComp(
+                    id=cur_mutated_residue_acceptor_chemcomp_id,
+                    code=cur_mutated_residue_acceptor_code,
+                    code_canonical=cur_mutated_residue_acceptor_code_canonical)
+            elif cur_mutated_residue_acceptor_type == 'DNA linking':
+                cur_mutated_residue_acceptor_chem_comp = ihm.DNAChemComp(id=cur_mutated_residue_acceptor_chemcomp_id,
+                                                                         code=cur_mutated_residue_acceptor_code,
+                                                                         code_canonical=cur_mutated_residue_acceptor_code_canonical)
+            elif cur_mutated_residue_acceptor_type == 'RNA linking':
+                cur_mutated_residue_acceptor_chem_comp = ihm.RNAChemComp(id=cur_mutated_residue_acceptor_chemcomp_id,
+                                                                         code=cur_mutated_residue_acceptor_code,
+                                                                         code_canonical=cur_mutated_residue_acceptor_code_canonical)
             else:
-                cur_mutated_residue_acceptor_chemical_descriptor = [x for x in list_chemical_descriptors if x.__dict__ == cur_mutated_residue_acceptor_chemical_descriptor.__dict__][0]
+                cur_mutated_residue_acceptor_chem_comp = ihm.ChemComp(id=cur_mutated_residue_acceptor_chemcomp_id,
+                                                                      code=cur_mutated_residue_acceptor_code,
+                                                                      code_canonical=cur_mutated_residue_acceptor_code_canonical)
+
+            if not occurs_in_list(cur_mutated_residue_acceptor_chem_comp, list_chemical_components):
+                list_chemical_components.append(cur_mutated_residue_acceptor_chem_comp)
+            else:
+                cur_mutated_residue_acceptor_chem_comp = [
+                    x for x in list_chemical_components if
+                    x.__dict__ == cur_mutated_residue_acceptor_chem_comp.__dict__][0]
 
             cur_mutated_residue_acceptor_index = -1
-            if not occurs_in_list(cur_mutated_residue_acceptor_chemical_descriptor,list_mutated_residues):
-                list_mutated_residues.append(cur_mutated_residue_acceptor_chemical_descriptor)
-            cur_mutated_residue_acceptor_index = list_mutated_residues.index(cur_mutated_residue_acceptor_chemical_descriptor)
+            if not occurs_in_list(cur_mutated_residue_acceptor_chem_comp, list_mutated_residues):
+                list_mutated_residues.append(cur_mutated_residue_acceptor_chem_comp)
+            cur_mutated_residue_acceptor_index = list_mutated_residues.index(cur_mutated_residue_acceptor_chem_comp)
             list_of_object_indices[i]['Mutated_residue_acceptor'] = cur_mutated_residue_acceptor_index
 
     ###### Poly_probe_position
@@ -2602,11 +2676,12 @@ def do(excel_filename, cifout_filename, atom_site_filename):
         ## and get the respective entry (to avoid duplicate entries)
         cur_resatom = get_resatom_from_list(cur_resatom_new, list_resatoms)
 
+        ## TODO: Modify for chem_comp instead of only the name
         cur_poly_probe_position = ihm.flr.PolyProbePosition(resatom = cur_resatom,
                                                         mutation_flag = cur_poly_probe_position_mutation_flag,
                                                         modification_flag = cur_poly_probe_position_modification_flag,
                                                         auth_name = cur_poly_probe_position_auth_name,
-                                                        mutated_chem_descriptor = None if (('Mutated_residue_donor' not in list_of_object_indices[i].keys()) or cur_poly_probe_position_mutation_flag == False) else list_mutated_residues[list_of_object_indices[i]['Mutated_residue_donor']],
+                                                        mutated_chem_comp_id = None if (('Mutated_residue_donor' not in list_of_object_indices[i].keys()) or cur_poly_probe_position_mutation_flag == False) else list_mutated_residues[list_of_object_indices[i]['Mutated_residue_donor']],
                                                         modified_chem_descriptor = None if (('Modified_residue_donor' not in list_of_object_indices[i].keys()) or cur_poly_probe_position_modification_flag == False) else list_modified_residues[list_of_object_indices[i]['Modified_residue_donor']])
 
         cur_poly_probe_position_index = -1
@@ -2646,7 +2721,7 @@ def do(excel_filename, cifout_filename, atom_site_filename):
                                                         mutation_flag = cur_poly_probe_position_mutation_flag,
                                                         modification_flag = cur_poly_probe_position_modification_flag,
                                                         auth_name = cur_poly_probe_position_auth_name,
-                                                        mutated_chem_descriptor = None if (('Mutated_residue_acceptor' not in list_of_object_indices[i].keys()) or cur_poly_probe_position_mutation_flag == False) else list_mutated_residues[list_of_object_indices[i]['Mutated_residue_acceptor']],
+                                                        mutated_chem_comp_id = None if (('Mutated_residue_acceptor' not in list_of_object_indices[i].keys()) or cur_poly_probe_position_mutation_flag == False) else list_mutated_residues[list_of_object_indices[i]['Mutated_residue_acceptor']],
                                                         modified_chem_descriptor = None if (('Modified_residue_acceptor' not in list_of_object_indices[i].keys()) or cur_poly_probe_position_modification_flag == False) else list_modified_residues[list_of_object_indices[i]['Modified_residue_acceptor']])
 
         cur_poly_probe_position_index = -1
