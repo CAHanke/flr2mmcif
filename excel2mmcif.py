@@ -2,7 +2,7 @@
 ## implementation to generate the objects and write the mmcif file in the end
 ## Christian Hanke 11.03.2019
 ## christian.hanke@hhu.de
-## version 1.04
+## version 1.05
 
 ## Note: In case of non-mandatory parameters, it should be checked whether the column is present at all or whether the respective cell in the excel sheet is empty (using pandas.isnull).
 
@@ -1864,6 +1864,10 @@ def do(excel_filename, cifout_filename, atom_site_filename):
                         xls_refmeas_data['RefMeas_Poly_probe_position_donor_name'][i])) else \
                 xls_refmeas_data['RefMeas_Poly_probe_position_donor_name'][i]
                 cur_poly_probe_position_entity = xls_refmeas_data['RefMeas_Poly_probe_position_donor_entity'][i]
+                cur_poly_probe_position_asym_unit_id = None if (
+                    'RefMeas_Poly_probe_position_donor_AsymUnit' not in xls_refmeas_data.keys()
+                    or pandas.isnull(xls_refmeas_data['RefMeas_Poly_probe_position_donor_AsymUnit'][i])) else \
+                    xls_refmeas_data['RefMeas_Poly_probe_position_donor_AsymUnit'][i]
                 cur_poly_probe_position_seq_id = int(xls_refmeas_data['RefMeas_Poly_probe_position_donor_seq_id'][i])
                 cur_poly_probe_position_comp_id = xls_refmeas_data['RefMeas_Poly_probe_position_donor_comp_id'][i]
                 cur_poly_probe_position_atom_id = None if (
@@ -1882,8 +1886,12 @@ def do(excel_filename, cifout_filename, atom_site_filename):
                 ## Create the Residue or atom
                 cur_resatom_new = None
                 cur_entity = list_ihm_entities[list_ihm_entity_ids.index(cur_poly_probe_position_entity)]
+                cur_asym_unit = None if cur_poly_probe_position_asym_unit_id is None else \
+                    list_asym_units[list_asym_units_ids.index(cur_poly_probe_position_asym_unit_id)]
                 ## First create the residue
                 cur_residue = cur_entity.residue(seq_id=cur_poly_probe_position_seq_id)
+                if cur_asym_unit is not None:
+                    cur_residue.asym = cur_asym_unit
 
                 if cur_poly_probe_position_atom_id is not None:
                     cur_atom = cur_residue.atom(atom_id=cur_poly_probe_position_atom_id)
@@ -1921,6 +1929,10 @@ def do(excel_filename, cifout_filename, atom_site_filename):
                         xls_refmeas_data['RefMeas_Poly_probe_position_acceptor_name'][i])) else \
                 xls_refmeas_data['RefMeas_Poly_probe_position_acceptor_name'][i]
                 cur_poly_probe_position_entity = xls_refmeas_data['RefMeas_Poly_probe_position_acceptor_entity'][i]
+                cur_poly_probe_position_asym_unit_id = None if (
+                        'RefMeas_Poly_probe_position_acceptor_AsymUnit' not in xls_refmeas_data.keys()
+                        or pandas.isnull(xls_refmeas_data['RefMeas_Poly_probe_position_acceptor_AsymUnit'][i])) else \
+                    xls_refmeas_data['RefMeas_Poly_probe_position_acceptor_AsymUnit'][i]
                 cur_poly_probe_position_seq_id = int(xls_refmeas_data['RefMeas_Poly_probe_position_acceptor_seq_id'][i])
                 cur_poly_probe_position_comp_id = xls_refmeas_data['RefMeas_Poly_probe_position_acceptor_comp_id'][i]
                 cur_poly_probe_position_atom_id = None if (
@@ -1939,8 +1951,12 @@ def do(excel_filename, cifout_filename, atom_site_filename):
                 ## Create the Residue or atom
                 cur_resatom_new = None
                 cur_entity = list_ihm_entities[list_ihm_entity_ids.index(cur_poly_probe_position_entity)]
+                cur_asym_unit = None if cur_poly_probe_position_asym_unit_id is None else \
+                    list_asym_units[list_asym_units_ids.index(cur_poly_probe_position_asym_unit_id)]
                 ## First create the residue
                 cur_residue = cur_entity.residue(seq_id=cur_poly_probe_position_seq_id)
+                if cur_asym_unit is not None:
+                    cur_residue.asym = cur_asym_unit
 
                 if cur_poly_probe_position_atom_id is not None:
                     cur_atom = cur_residue.atom(atom_id=cur_poly_probe_position_atom_id)
@@ -2653,6 +2669,10 @@ def do(excel_filename, cifout_filename, atom_site_filename):
     for i in range(nr_of_entries_flr):
         cur_poly_probe_position_auth_name = None if ('FLR_Poly_probe_position_donor_name' not in xls_flr_data.keys() or pandas.isnull(xls_flr_data['FLR_Poly_probe_position_donor_name'][i])) else xls_flr_data['FLR_Poly_probe_position_donor_name'][i]
         cur_poly_probe_position_entity = xls_flr_data['FLR_Poly_probe_position_donor_entity'][i]
+        cur_poly_probe_position_asym_unit_id = None if (
+                'FLR_Poly_probe_position_donor_AsymUnit' not in xls_flr_data.keys()
+                or pandas.isnull(xls_flr_data['FLR_Poly_probe_position_donor_AsymUnit'][i])) \
+            else xls_flr_data['FLR_Poly_probe_position_donor_AsymUnit'][i]
         cur_poly_probe_position_seq_id = int(xls_flr_data['FLR_Poly_probe_position_donor_seq_id'][i])
         cur_poly_probe_position_comp_id = xls_flr_data['FLR_Poly_probe_position_donor_comp_id'][i]
         cur_poly_probe_position_atom_id = None if ('FLR_Poly_probe_position_donor_atom_id' not in xls_flr_data.keys() or pandas.isnull(xls_flr_data['FLR_Poly_probe_position_donor_atom_id'][i])) else xls_flr_data['FLR_Poly_probe_position_donor_atom_id'][i]
@@ -2662,8 +2682,12 @@ def do(excel_filename, cifout_filename, atom_site_filename):
         ## Create the Residue or atom
         cur_resatom_new = None
         cur_entity = list_ihm_entities[list_ihm_entity_ids.index(cur_poly_probe_position_entity)]
+        cur_asym_unit = None if cur_poly_probe_position_asym_unit_id is None else \
+            list_asym_units[list_asym_units_ids.index(cur_poly_probe_position_asym_unit_id)]
         ## First create the residue
         cur_residue = cur_entity.residue(seq_id=cur_poly_probe_position_seq_id)
+        if cur_asym_unit is not None:
+            cur_residue.asym = cur_asym_unit
 
         if cur_poly_probe_position_atom_id is not None:
             cur_atom = cur_residue.atom(atom_id=cur_poly_probe_position_atom_id)
@@ -2694,6 +2718,10 @@ def do(excel_filename, cifout_filename, atom_site_filename):
     for i in range(nr_of_entries_flr):
         cur_poly_probe_position_auth_name = None if ('FLR_Poly_probe_position_acceptor_name' not in xls_flr_data.keys() or pandas.isnull(xls_flr_data['FLR_Poly_probe_position_acceptor_name'][i])) else xls_flr_data['FLR_Poly_probe_position_acceptor_name'][i]
         cur_poly_probe_position_entity = xls_flr_data['FLR_Poly_probe_position_acceptor_entity'][i]
+        cur_poly_probe_position_asym_unit_id = None if (
+                'FLR_Poly_probe_position_acceptor_AsymUnit' not in xls_flr_data.keys()
+                or pandas.isnull(xls_flr_data['FLR_Poly_probe_position_acceptor_AsymUnit'][i])) \
+            else xls_flr_data['FLR_Poly_probe_position_acceptor_AsymUnit'][i]
         cur_poly_probe_position_seq_id = int(xls_flr_data['FLR_Poly_probe_position_acceptor_seq_id'][i])
         cur_poly_probe_position_comp_id = xls_flr_data['FLR_Poly_probe_position_acceptor_comp_id'][i]
         cur_poly_probe_position_atom_id = None if ('FLR_Poly_probe_position_acceptor_atom_id' not in xls_flr_data.keys() or pandas.isnull(xls_flr_data['FLR_Poly_probe_position_acceptor_atom_id'][i])) else xls_flr_data['FLR_Poly_probe_position_acceptor_atom_id'][i]
@@ -2703,8 +2731,12 @@ def do(excel_filename, cifout_filename, atom_site_filename):
         ## Create the Residue or atom
         cur_resatom_new = None
         cur_entity = list_ihm_entities[list_ihm_entity_ids.index(cur_poly_probe_position_entity)]
+        cur_asym_unit = None if cur_poly_probe_position_asym_unit_id is None else \
+            list_asym_units[list_asym_units_ids.index(cur_poly_probe_position_asym_unit_id)]
         ## First create the residue
         cur_residue = cur_entity.residue(seq_id=cur_poly_probe_position_seq_id)
+        if cur_asym_unit is not None:
+            cur_residue.asym = cur_asym_unit
 
         if cur_poly_probe_position_atom_id is not None:
             cur_atom = cur_residue.atom(atom_id=cur_poly_probe_position_atom_id)
