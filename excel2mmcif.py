@@ -621,12 +621,17 @@ def do(excel_filename, cifout_filename, atom_site_filename):
         cur_ihm_entity_for_index = list_ihm_entities[list_ihm_entity_ids.index(cur_ihm_instance_entity_id)]
         cur_asym_unit = ihm.AsymUnit(entity = cur_ihm_entity_for_index, details = cur_ihm_instance_details, id=cur_ihm_instance_chain_id)
         ## check whether there is already an asymmetric unit with the same id
-        if not occurs_in_list(cur_asym_unit, list_asym_units):
+        if cur_ihm_instance_chain_id not in list_asym_units_ids:
+            ## Comparing the asym_units directly does not work, because the details are different. This would result in later problems when the dumper finds the same asym_unit_id twice
+            ## if (not occurs_in_list(cur_asym_unit, list_asym_units)) and (cur_ihm_instance_chain_id not in list_asym_units_ids):
             list_asym_units.append(cur_asym_unit)
             list_asym_units_ids.append(cur_ihm_instance_chain_id)
         else:
             ## otherwise, we use the asym_unit that was created before
-            cur_asym_unit = [x for x in list_asym_units if x.__dict__ == cur_asym_unit.__dict__][0]
+            #cur_asym_unit = [x for x in list_asym_units if x.__dict__ == cur_asym_unit.__dict__][0]
+            cur_asym_unit = list_asym_units[list_asym_units_ids.index(cur_ihm_instance_chain_id)]
+            ## join the details for the Asym-units
+            cur_asym_unit.details = cur_asym_unit.details if cur_ihm_instance_details in cur_asym_unit.details else " & ".join([cur_asym_unit.details,cur_ihm_instance_details])
 
         #### Asym Unit Ranges
         cur_asym_unit_range = ihm.AsymUnitRange(asym = list_asym_units[list_asym_units.index(cur_asym_unit)], seq_id_begin = cur_ihm_instance_seq_begin, seq_id_end=cur_ihm_instance_seq_end)
@@ -747,6 +752,13 @@ def do(excel_filename, cifout_filename, atom_site_filename):
 
         if cur_ihm_post_process_type == 'none':
             cur_step = ihm.analysis.EmptyStep(feature = cur_ihm_post_process_feature,
+                                                 num_models_begin = cur_ihm_post_process_number_model_begin,
+                                                 num_models_end = cur_ihm_post_process_number_model_end,
+                                                 assembly = list_structure_assemblies[list_structure_assembly_ids.index(cur_ihm_post_process_struct_assembly_id)],
+                                                 dataset_group = list_dataset_groups[list_dataset_group_ids.index(cur_ihm_post_process_dataset_group_id)],
+                                                 software = list_ihm_softwares[list_ihm_software_ids.index(cur_ihm_post_process_software_id)])
+        if cur_ihm_post_process_type == 'other':
+            cur_step = ihm.analysis.Step(feature = cur_ihm_post_process_feature,
                                                  num_models_begin = cur_ihm_post_process_number_model_begin,
                                                  num_models_end = cur_ihm_post_process_number_model_end,
                                                  assembly = list_structure_assemblies[list_structure_assembly_ids.index(cur_ihm_post_process_struct_assembly_id)],
@@ -2883,14 +2895,14 @@ def do(excel_filename, cifout_filename, atom_site_filename):
     list_fret_calibration_parameters = []
 
     for i in range(nr_of_entries_flr):
-        cur_phi_acceptor = None if ('FLR_Calibration_parameters_phi_acceptor' not in xls_flr_data.keys() or pandas.isnull(xls_flr_data['FLR_Calibration_parameters_phi_acceptor'][i])) else float(xls_flr_data['FLR_Calibration_parameters_phi_acceptor'][i])
-        cur_alpha = None if ('FLR_Calibration_parameters_alpha' not in xls_flr_data.keys() or pandas.isnull(xls_flr_data['FLR_Calibration_parameters_alpha'][i])) else float(xls_flr_data['FLR_Calibration_parameters_alpha'][i])
-        cur_alpha_sd = None if ('FLR_Calibration_parameters_alpha_sd' not in xls_flr_data.keys() or pandas.isnull(xls_flr_data['FLR_Calibration_parameters_alpha_sd'][i])) else float(xls_flr_data['FLR_Calibration_parameters_alpha_sd'][i])
-        cur_beta = None if ('FLR_Calibration_parameters_beta' not in xls_flr_data.keys() or pandas.isnull(xls_flr_data['FLR_Calibration_parameters_beta'][i])) else float(xls_flr_data['FLR_Calibration_parameters_beta'][i])
-        cur_gamma = None if ('FLR_Calibration_parameters_gamma' not in xls_flr_data.keys() or pandas.isnull(xls_flr_data['FLR_Calibration_parameters_gamma'][i])) else float(xls_flr_data['FLR_Calibration_parameters_gamma'][i])
-        cur_delta = None if ('FLR_Calibration_parameters_delta' not in xls_flr_data.keys() or pandas.isnull(xls_flr_data['FLR_Calibration_parameters_delta'][i])) else float(xls_flr_data['FLR_Calibration_parameters_delta'][i])
-        cur_gG_gR_ratio = None if ('FLR_Calibration_parameters_gG_gR_ratio' not in xls_flr_data.keys() or pandas.isnull(xls_flr_data['FLR_Calibration_parameters_gG_gR_ratio'][i])) else float(xls_flr_data['FLR_Calibration_parameters_gG_gR_ratio'][i])
-        cur_a_b = None if ('FLR_Calibration_parameters_a_b' not in xls_flr_data.keys() or pandas.isnull(xls_flr_data['FLR_Calibration_parameters_a_b'][i])) else float(xls_flr_data['FLR_Calibration_parameters_a_b'][i])
+        cur_phi_acceptor = None if ('FLR_Calibration_parameters_phi_acceptor' not in xls_flr_data.keys() or pandas.isnull(xls_flr_data['FLR_Calibration_parameters_phi_acceptor'][i])) else xls_flr_data['FLR_Calibration_parameters_phi_acceptor'][i]
+        cur_alpha = None if ('FLR_Calibration_parameters_alpha' not in xls_flr_data.keys() or pandas.isnull(xls_flr_data['FLR_Calibration_parameters_alpha'][i])) else xls_flr_data['FLR_Calibration_parameters_alpha'][i]
+        cur_alpha_sd = None if ('FLR_Calibration_parameters_alpha_sd' not in xls_flr_data.keys() or pandas.isnull(xls_flr_data['FLR_Calibration_parameters_alpha_sd'][i])) else xls_flr_data['FLR_Calibration_parameters_alpha_sd'][i]
+        cur_beta = None if ('FLR_Calibration_parameters_beta' not in xls_flr_data.keys() or pandas.isnull(xls_flr_data['FLR_Calibration_parameters_beta'][i])) else xls_flr_data['FLR_Calibration_parameters_beta'][i]
+        cur_gamma = None if ('FLR_Calibration_parameters_gamma' not in xls_flr_data.keys() or pandas.isnull(xls_flr_data['FLR_Calibration_parameters_gamma'][i])) else xls_flr_data['FLR_Calibration_parameters_gamma'][i]
+        cur_delta = None if ('FLR_Calibration_parameters_delta' not in xls_flr_data.keys() or pandas.isnull(xls_flr_data['FLR_Calibration_parameters_delta'][i])) else xls_flr_data['FLR_Calibration_parameters_delta'][i]
+        cur_gG_gR_ratio = None if ('FLR_Calibration_parameters_gG_gR_ratio' not in xls_flr_data.keys() or pandas.isnull(xls_flr_data['FLR_Calibration_parameters_gG_gR_ratio'][i])) else xls_flr_data['FLR_Calibration_parameters_gG_gR_ratio'][i]
+        cur_a_b = None if ('FLR_Calibration_parameters_a_b' not in xls_flr_data.keys() or pandas.isnull(xls_flr_data['FLR_Calibration_parameters_a_b'][i])) else xls_flr_data['FLR_Calibration_parameters_a_b'][i]
         ## Make sure one fret_calibration_parameter is not None
         cur_fret_calibration_parameters = None
         if (cur_phi_acceptor is not None) or (cur_alpha is not None) or (cur_beta is not None) or (cur_gamma is not None) or (cur_delta is not None) or (cur_gG_gR_ratio is not None) or (cur_a_b is not None):
