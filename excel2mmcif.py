@@ -350,6 +350,8 @@ def do(excel_filename, cifout_filename, atom_site_filename):
             cur_dataset = ihm.dataset.DeNovoModelDataset(cur_location, details=cur_ihm_external_files_dataset_details)
         if cur_ihm_external_files_dataset_type == 'Integrative model':
             cur_dataset = ihm.dataset.IntegrativeModelDataset(cur_location, details=cur_ihm_external_files_dataset_details)
+        if cur_ihm_external_files_dataset_type == 'Other':
+            cur_dataset = ihm.dataset.Dataset(cur_location, details=cur_ihm_external_files_dataset_details)
         ## store the dataset in the list for dataset groups
         if cur_dataset is not None and not occurs_in_list(cur_dataset, list_datasets):
             list_datasets.append(cur_dataset)
