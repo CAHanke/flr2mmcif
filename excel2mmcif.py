@@ -346,11 +346,13 @@ def do(excel_filename, cifout_filename, atom_site_filename):
         cur_dataset = None
         if cur_ihm_external_files_dataset_type == 'Single molecule FRET data':
             cur_dataset = ihm.dataset.FRETDataset(cur_location, details=cur_ihm_external_files_dataset_details)
-        if cur_ihm_external_files_dataset_type == 'De Novo model':
+        elif cur_ihm_external_files_dataset_type == 'De Novo model':
             cur_dataset = ihm.dataset.DeNovoModelDataset(cur_location, details=cur_ihm_external_files_dataset_details)
-        if cur_ihm_external_files_dataset_type == 'Integrative model':
+        elif cur_ihm_external_files_dataset_type == 'Integrative model':
             cur_dataset = ihm.dataset.IntegrativeModelDataset(cur_location, details=cur_ihm_external_files_dataset_details)
-        if cur_ihm_external_files_dataset_type == 'Other':
+        elif cur_ihm_external_files_dataset_type == 'Other':
+            cur_dataset = ihm.dataset.Dataset(cur_location, details=cur_ihm_external_files_dataset_details)
+        else:
             cur_dataset = ihm.dataset.Dataset(cur_location, details=cur_ihm_external_files_dataset_details)
         ## store the dataset in the list for dataset groups
         if cur_dataset is not None and not occurs_in_list(cur_dataset, list_datasets):
@@ -2197,15 +2199,15 @@ def do(excel_filename, cifout_filename, atom_site_filename):
                 ## Create the RefMeasurement, handle the lifetimes subsequently
                 cur_ref_measurement = ihm.flr.RefMeasurement(ref_sample_probe = cur_ref_sample_probe, details = cur_ref_measurement_details)
                 ## Handle the lifetime lists
-                cur_species_fraction_list = xls_refmeas_data['RefMeas_Lifetime_species_fraction_list'][i]
-                cur_lifetime_list = xls_refmeas_data['RefMeas_Lifetime_lifetime_list'][i]
-                cur_species_names_list = None if ('RefMeas_Lifetime_species_name_list' not in xls_refmeas_data.keys() or pandas.isnull(xls_refmeas_data['RefMeas_Lifetime_species_name_list'][i])) else xls_refmeas_data['RefMeas_Lifetime_species_name_list'][i]
+                cur_species_fraction_list = str(xls_refmeas_data['RefMeas_Lifetime_species_fraction_list'][i])
+                cur_lifetime_list = str(xls_refmeas_data['RefMeas_Lifetime_lifetime_list'][i])
+                cur_species_names_list = None if ('RefMeas_Lifetime_species_name_list' not in xls_refmeas_data.keys() or pandas.isnull(xls_refmeas_data['RefMeas_Lifetime_species_name_list'][i])) else str(xls_refmeas_data['RefMeas_Lifetime_species_name_list'][i])
                 ## split the semicolon-separated list
-                all_cur_species_fractions = cur_species_fraction_list.split(";")
-                all_cur_lifetimes = cur_lifetime_list.split(";")
-                all_cur_species_names = [] if cur_species_names_list is None else cur_species_names_list.split(";")
+                all_cur_species_fractions = cur_species_fraction_list.split(";") if ";" in cur_species_fraction_list else [cur_species_fraction_list]
+                all_cur_lifetimes = cur_lifetime_list.split(";") if ";" in cur_lifetime_list else [cur_lifetime_list]
+                all_cur_species_names = [] if cur_species_names_list is None else (cur_species_names_list.split(";") if ";" in cur_species_names_list else [cur_species_names_list])
                 if len(all_cur_species_fractions) != len(all_cur_lifetimes):
-                    print('ERROR: Number of species-fractions (%i) and lifetimes (%i) for reference measurement (Tab \'Reference_measurements\' differs.'
+                    print('ERROR: Number of species-fractions (%i) and lifetimes (%i) for reference measurement (Tab \'Reference_measurements\') differs.'
                           %(len(all_cur_species_fractions), len(all_cur_lifetimes)))
                 ## Create new RefMeasurementLifetime objects
                 for tmpj in range(len(all_cur_species_fractions)):
