@@ -259,6 +259,7 @@ class Excel2mmcifConverter:
         self.list_fret_calibration_parameters = []
         self.list_lifetime_fit_models = []
         self.list_fret_analysis = []
+        self.list_fret_analysis_ids = []
         self.list_peak_assignments = []
         self.list_fret_distance_restraint_groups = []
         self.list_fret_distance_restraints = []
@@ -271,6 +272,19 @@ class Excel2mmcifConverter:
         self.list_FPS_MPP_modeling = []
         self.list_flr_model_quality = []
         self.list_flr_model_distances = []
+        # IHM multi-state schemes
+        self.list_ihm_multi_state_schemes = []
+        self.list_ihm_multi_state_scheme_ids = []
+        self.list_ihm_multi_state_scheme_connectivities = []
+        self.list_ihm_multi_state_scheme_connectivity_ids = []
+        self.list_ihm_mss_relaxation_times = []
+        self.list_ihm_mss_relaxation_time_ids = []
+        self.list_ihm_mss_eq_constants = []
+        self.list_ihm_mss_eq_constant_ids = []
+        self.list_ihm_mss_kinetic_rates = []
+        self.list_ihm_mss_kinetic_rate_ids = []
+        self.list_ihm_mss_relaxation_time_fret_analysis_connections = []
+        self.list_ihm_mss_kinetic_rate_fret_analysis_connections = []
 
     def fill(self):
         self.add_general()
@@ -289,6 +303,7 @@ class Excel2mmcifConverter:
         self.add_flr()
         self.add_flr_model_quality()
         self.add_flr_model_distances()
+        self.add_ihm_multi_state_schemes()
         self.create_flrdata()
         self.handle_atom_site_file()
 
@@ -552,14 +567,14 @@ class Excel2mmcifConverter:
                         self.list_dataset_ids.append(cur_dataset_list_id)
                         self.list_dataset_external_reference_ids.append(
                             cur_dataset_external_reference_id)
-                    if cur_ihm_dataset_group not in \
+                    if cur_dataset_group not in \
                             tmp_dict_for_dataset_groups.keys():
                         tmp_dict_for_dataset_groups[cur_dataset_group] = []
                         tmp_dict_for_dataset_groups[cur_dataset_group].append(
                             cur_dataset)
-                        tmp_dict_for_dataset_groups[cur_dataset_group] = {}
+                        tmp_info_for_dataset_groups[cur_dataset_group] = {}
                         tmp_info_for_dataset_groups[cur_dataset_group]['name'] \
-                            = cur_ihm_dataset_group_name
+                            = cur_dataset_group_name
                         tmp_info_for_dataset_groups[
                             cur_dataset_group]['details'] = \
                             cur_dataset_group_details
@@ -571,7 +586,7 @@ class Excel2mmcifConverter:
             else:
                 cur_dataset = None
                 if cur_dataset_reference_type == 'DOI':
-                    ## !!! TODO: root
+                    # !!! TODO: root
                     cur_repo = ihm.location.Repository(
                         doi=cur_dataset_reference,
                         root='.',
@@ -579,6 +594,8 @@ class Excel2mmcifConverter:
                         top_directory=cur_dataset_top_directory)
                     if not occurs_in_list(cur_repo, self.list_repositories):
                         self.list_repositories.append(cur_repo)
+                    if not cur_dataset_external_reference_id in \
+                           tmp_dict_for_external_reference_store_dataset_list_id.keys():
                         tmp_dict_for_external_reference_store_dataset_list_id[
                             cur_dataset_external_reference_id] = cur_dataset_list_id
                         tmp_dict_for_external_reference_store_dataset_type[
@@ -846,7 +863,7 @@ class Excel2mmcifConverter:
                 xls_data['IHM_Entity_Nonpolymer_chem_comp_formula'][i]
 
             # Source
-            ## !!! TODO: For natural and synthetic: extend for the details
+            # !!! TODO: For natural and synthetic: extend for the details
             cur_source = None
             if cur_entity_source_method == 'genetically manipulated source':
                 cur_source = ihm.source.Manipulated()
@@ -878,9 +895,9 @@ class Excel2mmcifConverter:
                     # i.e. Three letters in brackets.
                     if '(' in cur_entity_polymer_one_letter_code:
                         list_of_sequence = []
-                        this_index_i = 0  ## non-canonical index
-                        this_index_j = 0  ## canonical index
-                        ## Go through the non-canonical sequence
+                        this_index_i = 0  # non-canonical index
+                        this_index_j = 0  # canonical index
+                        # Go through the non-canonical sequence
                         while this_index_i < \
                                 len(cur_entity_polymer_one_letter_code):
                             # If non-canonical and canonical sequence match,
@@ -1190,7 +1207,7 @@ class Excel2mmcifConverter:
                 cur_asym_unit = \
                     self.list_asym_units[
                         self.list_asym_units_ids.index(cur_instance_chain_id)]
-                ## join the details for the Asym-units
+                # join the details for the Asym-units
                 cur_asym_unit.details = \
                     cur_asym_unit.details if cur_instance_details in \
                                              cur_asym_unit.details \
@@ -1299,7 +1316,7 @@ class Excel2mmcifConverter:
                 cur_instance_structure_assembly_description)
 
         # create the model representations
-        ### TODO: CHECK: Should this be self.tmp_dict_for_model_representations.keys() ???
+        # TODO: CHECK: Should this be self.tmp_dict_for_model_representations.keys() ???
         for groupkey in self.tmp_dict_for_model_representations:
             cur_model_representation = \
                 ihm.representation.Representation(
@@ -1307,7 +1324,7 @@ class Excel2mmcifConverter:
             self.list_ihm_model_representations.append(cur_model_representation)
             self.list_ihm_model_representation_ids.append(groupkey)
 
-        ## create the structure assemblies
+        # create the structure assemblies
         for groupkey in self.tmp_dict_for_structure_assembly.keys():
             cur_structure_assembly = ihm.Assembly(
                 elements=self.tmp_dict_for_structure_assembly[groupkey],
@@ -1489,7 +1506,6 @@ class Excel2mmcifConverter:
         nr_entries_protocol = \
             len(xls_data_protocol['IHM_Modeling_protocol_Ordinal'])
 
-        ### !! TODO: check whether these dicts are only needed in this function
         tmp_dict_for_protocols_modeling = {}
         tmp_dict_for_protocols_modeling_ids = {}
         tmp_dict_for_protocols_names = {}
@@ -1623,8 +1639,6 @@ class Excel2mmcifConverter:
                 self.list_ihm_modeling_protocols.append(cur_modeling_protocol)
                 self.list_ihm_modeling_protocols_ids.append(groupkey)
 
-
-
     def add_ihm_multi_state_modeling_and_models(
             self,
             sheet_name_multi_state_modeling='Multi-state modeling',
@@ -1709,7 +1723,7 @@ class Excel2mmcifConverter:
                     experiment_type=cur_multi_state_modeling_experiment_type,
                     population_fraction=cur_multi_state_modeling_population_fraction)
 
-                if cur_state not in list_empty_states:
+                if cur_multi_state_modeling_state_id not in self.list_empty_state_ids:
                     self.list_empty_states.append(cur_state)
                     self.list_empty_state_ids.append(cur_multi_state_modeling_state_id)
 
@@ -1833,10 +1847,10 @@ class Excel2mmcifConverter:
                 self.list_models_states.append(cur_state)
                 self.list_models_state_ids.append(groupkey)
 
-        ## TODO? How to use this properly?
-        ## create the state group (model.py)
-        ## collection of all models
-        ## combine all states that include models and those that don't
+        # TODO? How to use this properly?
+        # create the state group (model.py)
+        # collection of all models
+        # combine all states that include models and those that don't
         self.list_models_states.extend(self.list_empty_states)
         self.list_models_state_ids.extend(self.list_empty_state_ids)
         cur_state_group = ihm.model.StateGroup(elements=self.list_models_states)
@@ -2085,7 +2099,7 @@ class Excel2mmcifConverter:
                 cur_entity = self.list_ihm_entities[
                     self.list_ihm_entity_ids.index(
                         cur_fps_mpp_group_atom_position_entity_id)]
-                ## First create the residue
+                # First create the residue
                 cur_asym_unit = self.list_asym_units[
                     self.list_asym_units_ids.index(
                         cur_fps_mpp_atom_position_asym_id)]
@@ -2130,7 +2144,7 @@ class Excel2mmcifConverter:
         for i in range(nr_entries):
             self.list_of_object_indices_refmeas.append({})
 
-        ## only do the rest if there are reference measurements
+        # only do the rest if there are reference measurements
         if nr_entries == 0:
             return
         # List that contains, whether the reference measurement contains
@@ -2188,13 +2202,13 @@ class Excel2mmcifConverter:
 #                    None if ('RefMeas_Instrument' not in  xls_data.keys() or
 #                             pandas.isnull(xls_data['RefMeas_Instrument'][i])) \
 #                        else xls_data['RefMeas_Instrument'][i]
-#                ## create the object
+#                # create the object
 #                cur_instrument = ihm.flr.Instrument(details=cur_instrument_details)
-#                ## check whether it is already in the list
+#                # check whether it is already in the list
 #                cur_instrument_index = -1
 #                if cur_instrument not in self.list_instruments:
 #                    self.list_instruments.append(cur_instrument)
-#                ## and store the index of the respective object
+#                # and store the index of the respective object
 #                cur_instrument_index = self.list_instruments.index(cur_instrument)
 #                self.list_of_object_indices_refmeas[i]['Instrument'] = cur_instrument_index
 #
@@ -2266,11 +2280,11 @@ class Excel2mmcifConverter:
             self.list_of_object_indices_refmeas[i]['Sample'] = cur_sample_index
 
         # => Experiment for reference measurement
-#        ## in case of the experiment, there is no need to read something from the file. Everything is defined before
+#        # in case of the experiment, there is no need to read something from the file. Everything is defined before
 #        Experiment_1 = ihm.flr.Experiment()
 #        cur_experiment_index = -1
 #        for i in range(nr_of_entries_refmeas):
-#            ## make sure that every instrument-inst_setting-exp_condition-sample-combination is there only once
+#            # make sure that every instrument-inst_setting-exp_condition-sample-combination is there only once
 #            cur_instrument = list_instruments[list_of_object_indices_refmeas[i]['Instrument']]
 #            cur_inst_setting = list_inst_settings[list_of_object_indices_refmeas[i]['Instrument_setting']]
 #            cur_exp_condition = list_exp_conditions[list_of_object_indices_refmeas[i]['Experimental_condition']]
@@ -2304,7 +2318,7 @@ class Excel2mmcifConverter:
                     xls_data['RefMeas_Probe_donor_link_type'][i]
                 cur_reactive_probe_donor_flag = False
                 cur_reactive_probe_donor_name = None
-                ## TODO! MODIFY TO HANDLE EMPTY CELLS HERE!
+                # TODO! MODIFY TO HANDLE EMPTY CELLS HERE!
 #                if 'RefMeas_Probe_donor_name' in xls_refmeas_data.keys():
                 if 'RefMeas_Reactive_probe_donor_name' in xls_data.keys() \
                         and not pandas.isnull(xls_data['RefMeas_Probe_donor_name'][i]):
@@ -2996,7 +3010,7 @@ class Excel2mmcifConverter:
                 # add it to the list of resatoms if it is not there yet
                 if get_resatom_from_list(cur_resatom_new, self.list_resatoms) is None:
                     self.list_resatoms.append(cur_resatom_new)
-                ## and get the respective entry (to avoid duplicate entries)
+                # and get the respective entry (to avoid duplicate entries)
                 cur_resatom = get_resatom_from_list(cur_resatom_new,
                                                     self.list_resatoms)
 
@@ -3057,14 +3071,14 @@ class Excel2mmcifConverter:
                         or xls_data['RefMeas_Poly_probe_position_acceptor_modification_flag'][i] in
                         ['False', 'no', 'No', 'NO']) else True
 
-                ## Create the Residue or atom
+                # Create the Residue or atom
                 cur_resatom_new = None
                 cur_entity = self.list_ihm_entities[
                     self.list_ihm_entity_ids.index(cur_poly_probe_position_entity)]
                 cur_asym_unit = None if cur_poly_probe_position_asym_unit_id is None else \
                     self.list_asym_units[
                         self.list_asym_units_ids.index(cur_poly_probe_position_asym_unit_id)]
-                ## First create the residue
+                # First create the residue
                 cur_residue = cur_entity.residue(seq_id=cur_poly_probe_position_seq_id)
                 if cur_asym_unit is not None:
                     cur_residue.asym = cur_asym_unit
@@ -3074,10 +3088,10 @@ class Excel2mmcifConverter:
                     cur_resatom_new = cur_atom
                 else:
                     cur_resatom_new = cur_residue
-                ## add it to the list of resatoms if it is not there yet
+                # add it to the list of resatoms if it is not there yet
                 if get_resatom_from_list(cur_resatom_new, self.list_resatoms) is None:
                     self.list_resatoms.append(cur_resatom_new)
-                ## and get the respective entry (to avoid duplicate entries)
+                # and get the respective entry (to avoid duplicate entries)
                 cur_resatom = get_resatom_from_list(cur_resatom_new,
                                                     self.list_resatoms)
 
@@ -3336,7 +3350,7 @@ class Excel2mmcifConverter:
             cur_ref_measurement = None
             # If donor information is given for the reference measurement
             if tmp_list_ref_measurement_contains_donor_info[i]:
-                ## Get the respective sample_probe_details entry
+                # Get the respective sample_probe_details entry
                 cur_ref_sample_probe = self.list_sample_probe_details[
                     self.list_of_object_indices_refmeas[i]['Sample_probe_details_donor']]
 
@@ -3440,13 +3454,12 @@ class Excel2mmcifConverter:
                 else xls_data['RefMeas_Group_Details'][i]
             cur_ref_measurement_group = \
                 ihm.flr.RefMeasurementGroup(details=cur_ref_measurement_group_details)
-            ## add the reference measurements for the current reference measurement group
+            # add the reference measurements for the current reference measurement group
             for entry in tmp_dict_for_reference_measurement_groups[cur_ref_measurement_group_id]:
                 cur_ref_measurement_group.add_ref_measurement(entry)
             if cur_ref_measurement_group not in self.list_ref_measurement_groups:
                 self.list_ref_measurement_groups.append(cur_ref_measurement_group)
                 self.list_ref_measurement_group_ids.append(cur_ref_measurement_group_id)
-
 
     def add_flr(self, sheet_name='FLR', skiprows=3, header=0):
         """Read flrCIF information from the excel sheet"""
@@ -3487,7 +3500,7 @@ class Excel2mmcifConverter:
 
         # => Instrument
         for i in range(nr_entries):
-            ## get the respective column for the sample condition
+            # get the respective column for the sample condition
             cur_instrument_details = None if (
                     'FLR_Instrument' not in xls_data.keys() or
                     pandas.isnull(xls_data['FLR_Instrument'][i])) \
@@ -3624,7 +3637,7 @@ class Excel2mmcifConverter:
             # Probe_descriptor
             cur_probe_descriptor_donor = None
             cur_reactive_probe_donor_chemical_descriptor = None
-            ## index of the reactive_probe_chemical_descriptor in the list_chemical_descriptors
+            # index of the reactive_probe_chemical_descriptor in the list_chemical_descriptors
 
             cur_chromophore_donor_chemical_descriptor = None
             # index of the chromophore in the list_chemical_descriptors
@@ -4327,7 +4340,7 @@ class Excel2mmcifConverter:
             if get_resatom_from_list(cur_resatom_new,
                                      self.list_resatoms) is None:
                 self.list_resatoms.append(cur_resatom_new)
-            ## and get the respective entry (to avoid duplicate entries)
+            # and get the respective entry (to avoid duplicate entries)
             cur_resatom = get_resatom_from_list(cur_resatom_new,
                                                 self.list_resatoms)
 
@@ -4660,7 +4673,7 @@ class Excel2mmcifConverter:
             cur_lifetime_fit_model = ihm.flr.LifetimeFitModel(
                 name=cur_lifetime_fit_model_name,
                 description=cur_lifetime_fit_model_description,
-                external_file=cur_lifetime_fit_model_external_file,
+                file=cur_lifetime_fit_model_external_file,
                 citation=cur_lifetime_fit_model_citation)
             if cur_lifetime_fit_model not in self.list_lifetime_fit_models:
                 self.list_lifetime_fit_models.append(cur_lifetime_fit_model)
@@ -4671,6 +4684,10 @@ class Excel2mmcifConverter:
 
         # => FRET_analysis
         for i in range(nr_entries):
+            cur_fret_analysis_id = None if (
+                'FLR_FRET_analysis_id' not in xls_data.keys()
+                or pandas.isnull(xls_data['FLR_FRET_analysis_id'][i])) \
+                else xls_data['FLR_FRET_analysis_id'][i]
             cur_fret_analysis_type = None if (
                     'FLR_FRET_analysis_type' not in xls_data.keys()
                     or pandas.isnull(xls_data['FLR_FRET_analysis_type'][i])) \
@@ -4740,12 +4757,13 @@ class Excel2mmcifConverter:
                 method_name=cur_fret_analysis_method_name,
                 chi_square_reduced=cur_fret_analysis_chi_square_reduced,
                 dataset=cur_fret_analysis_dataset,
-                external_file=cur_fret_analysis_external_file,
+                file=cur_fret_analysis_external_file,
                 software=cur_fret_analysis_software)
 
             cur_fret_analysis_index = -1
             if cur_fret_analysis not in self.list_fret_analysis:
                 self.list_fret_analysis.append(cur_fret_analysis)
+                self.list_fret_analysis_ids.append(cur_fret_analysis_id)
             cur_fret_analysis_index = self.list_fret_analysis.index(cur_fret_analysis)
             self.list_of_object_indices[i]['FRET_analysis'] = cur_fret_analysis_index
 
@@ -4772,7 +4790,7 @@ class Excel2mmcifConverter:
             self.list_of_object_indices[i]['Peak_assignment'] = \
                 cur_peak_assignment_index
 
-        ###### Fret_distance_restraint_group
+        # => Fret_distance_restraint_group
         for i in range(nr_entries):
             cur_fret_distance_restraint_group_id = None if (
                     'FLR_FRET_distance_restraint_group' not in xls_data.keys()
@@ -4936,7 +4954,7 @@ class Excel2mmcifConverter:
                     self.list_FPS_AV_parameters.index(cur_FPS_AV_param_acceptor)
                 self.list_of_object_indices[i]['FPS_AV_param_acceptor'] = \
                     cur_FPS_AV_param_acceptor_index
-                ## save whether it is AV1 or AV3
+                # save whether it is AV1 or AV3
                 self.list_of_object_indices[i]['AV_modeling_method_acceptor'] = 'AV1' if (
                         cur_FPS_AV_param_acceptor_AV_probe_radius_2 == None) else 'AV3'
 
@@ -5216,7 +5234,6 @@ class Excel2mmcifConverter:
                     self.list_of_object_indices[i]['FPS_MPP_modeling_acceptor'] = \
                         cur_FPS_MPP_modeling_acceptor_index
 
-
     def add_flr_model_quality(self,
                               sheet_name='FLR_FRET_Model_quality',
                               skiprows=3,
@@ -5293,6 +5310,313 @@ class Excel2mmcifConverter:
             if not cur_flr_fret_model_distance in self.list_flr_model_distances:
                 self.list_flr_model_distances.append(cur_flr_fret_model_distance)
 
+    def add_ihm_multi_state_schemes(self,
+                                    sheet_name='Multi-state scheme',
+                                    skiprows=3,
+                                    header=0):
+        """Read information on multi-state schemes from the excel sheet."""
+        if not sheet_name in self.xls_file.sheet_names:
+            return
+        if self.verbose:
+            print("... Processing tab \'Multi-state scheme\' ...")
+        xls_data = pandas.read_excel(self.xls_file,
+                                     sheet_name=sheet_name,
+                                     skiprows=skiprows,
+                                     header=header)
+        nr_entries = len(xls_data['IHM_mss_ordinal_ID'])
+
+        for i in range(nr_entries):
+            # info on the multi-state scheme
+            cur_scheme_id = xls_data['IHM_mss_scheme_id'][i]
+            cur_scheme_name = xls_data['IHM_mss_scheme_name'][i]
+            cur_scheme_details = None if (
+                'IHM_mss_scheme_details' not in xls_data.keys()
+                or pandas.isnull(xls_data['IHM_mss_scheme_details'][i])) \
+                else xls_data['IHM_mss_scheme_details'][i]
+            # info on the connectivity
+            cur_connectivity_start_state_id = None if (
+                'IHM_mss_connectivity_start_state_id' not in xls_data.keys()
+                or pandas.isnull(xls_data['IHM_mss_connectivity_start_state_id'][i])) \
+                else xls_data['IHM_mss_connectivity_start_state_id'][i]
+            cur_connectivity_end_state_id = None if (
+                'IHM_mss_connectivity_end_state_id' not in xls_data.keys()
+                or pandas.isnull(xls_data['IHM_mss_connectivity_end_state_id'][i])) \
+                else xls_data['IHM_mss_connectivity_end_state_id'][i]
+            cur_connectivity_details = None if (
+                'IHM_mss_connectivity_details' not in xls_data.keys()
+                or pandas.isnull(xls_data['IHM_mss_connectivity_details'][i])) \
+                else xls_data['IHM_mss_connectivity_details'][i]
+            cur_connectivity_dataset_group_id = None if (
+                'IHM_mss_connectivity_dataset_group_id' not in xls_data.keys()
+                or pandas.isnull(xls_data['IHM_mss_connectivity_dataset_group_id'][i])) \
+                else xls_data['IHM_mss_connectivity_dataset_group_id'][i]
+            # relaxation time
+            cur_relaxation_time_details = None if (
+                'IHM_mss_relaxation_time_details' not in xls_data.keys()
+                or pandas.isnull(xls_data['IHM_mss_relaxation_time_details'][i])) \
+                else xls_data['IHM_mss_relaxation_time_details'][i]
+            cur_relaxation_time_assignment_choice = None if (
+                'IHM_mss_relaxation_time_assignment_choice' not in xls_data.keys()
+                or pandas.isnull(xls_data['IHM_mss_relaxation_time_assignment_choice'][i]))\
+                else xls_data['IHM_mss_relaxation_time_assignment_choice'][i]
+            cur_relaxation_time_value = None if (
+                'IHM_mss_relaxation_time_value' not in xls_data.keys()
+                or pandas.isnull(xls_data['IHM_mss_relaxation_time_value'][i])) \
+                else xls_data['IHM_mss_relaxation_time_value'][i]
+            cur_relaxation_time_unit = None if (
+                'IHM_mss_relaxation_time_unit' not in xls_data.keys()
+                or pandas.isnull(xls_data['IHM_mss_relaxation_time_unit'][i])) \
+                else xls_data['IHM_mss_relaxation_time_unit'][i]
+            cur_relaxation_time_amplitude = None if (
+                'IHM_mss_relaxation_time_amplitude' not in xls_data.keys()
+                or pandas.isnull(xls_data['IHM_mss_relaxation_time_amplitude'][i])) \
+                else xls_data['IHM_mss_relaxation_time_amplitude'][i]
+            cur_relaxation_time_dataset_group_id = None if (
+                'IHM_mss_relaxation_time_dataset_group_id' not in xls_data.keys()
+                or pandas.isnull(xls_data['IHM_mss_relaxation_time_dataset_group_id'][i])) \
+                else xls_data['IHM_mss_relaxation_time_dataset_group_id'][i]
+            cur_relaxation_time_external_file_id = None if (
+                'IHM_mss_relaxation_time_external_file_id' not in xls_data.keys()
+                or pandas.isnull(xls_data['IHM_mss_relaxation_time_external_file_id'][i])) \
+                else xls_data['IHM_mss_relaxation_time_external_file_id'][i]
+            # kinetic rate
+            cur_kinetic_rate_details = None if (
+                'IHM_mss_kinetic_rate_details' not in xls_data.keys()
+                or pandas.isnull(xls_data['IHM_mss_kinetic_rate_details'][i])) \
+                else xls_data['IHM_mss_kinetic_rate_details'][i]
+            cur_kinetic_rate_transition_rate_const_value = None if (
+                'IHM_mss_kinetic_rate_transition_rate_const_value' not in xls_data.keys()
+                or pandas.isnull(xls_data['IHM_mss_kinetic_rate_transition_rate_const_value'][i])) \
+                else xls_data['IHM_mss_kinetic_rate_transition_rate_const_value'][i]
+            # kinetic rate equilibrium constant
+            cur_kinetic_rate_eq_const_value = None if (
+                'IHM_mss_kinetic_rate_eq_const_value' not in xls_data.keys()
+                or pandas.isnull(xls_data['IHM_mss_kinetic_rate_eq_const_value'][i])) \
+                else xls_data['IHM_mss_kinetic_rate_eq_const_value'][i]
+            cur_kinetic_rate_eq_const_det_method = None if (
+                'IHM_mss_kinetic_rate_eq_const_det_method' not in xls_data.keys()
+                or pandas.isnull(xls_data['IHM_mss_kinetic_rate_eq_const_det_method'][i])) \
+                else xls_data['IHM_mss_kinetic_rate_eq_const_det_method'][i]
+            cur_kinetic_rate_eq_const_unit = None if (
+                'IHM_mss_kinetic_rate_eq_const_unit' not in xls_data.keys()
+                or pandas.isnull(xls_data['IHM_mss_kinetic_rate_eq_const_unit'][i])) \
+                else xls_data['IHM_mss_kinetic_rate_eq_const_unit'][i]
+            cur_kinetic_rate_dataset_group_id = None if (
+                'IHM_mss_kinetic_rate_dataset_group_id' not in xls_data.keys()
+                or pandas.isnull(xls_data['IHM_mss_kinetic_rate_dataset_group_id'][i])) \
+                else xls_data['IHM_mss_kinetic_rate_dataset_group_id'][i]
+            cur_kinetic_rate_external_file_id = None if (
+                'IHM_mss_kinetic_rate_external_file_id' not in xls_data.keys()
+                or pandas.isnull(xls_data['IHM_mss_kinetic_rate_external_file_id'][i])) \
+                else xls_data['IHM_mss_kinetic_rate_external_file_id'][i]
+            # Connection between relaxation time and fret_analysis
+            cur_connection_relaxation_time_fret_analysis_id = None if (
+                'IHM_mss_relaxation_time_fret_analysis_id' not in xls_data.keys()
+                or pandas.isnull(xls_data['IHM_mss_relaxation_time_fret_analysis_id'][i])) \
+                else xls_data['IHM_mss_relaxation_time_fret_analysis_id'][i]
+            cur_connection_relaxation_time_fret_analysis_details = None if (
+                'IHM_mss_relaxation_time_fret_analysis_details' not in xls_data.keys()
+                or pandas.isnull(xls_data['IHM_mss_relaxation_time_fret_analysis_details'][i])) \
+                else xls_data['IHM_mss_relaxation_time_fret_analysis_details'][i]
+            # Connection between kinetic rate and fret_analysis
+            cur_connection_kinetic_rate_fret_analysis_id = None if (
+                'IHM_mss_kinetic_rate_fret_analysis_id' not in xls_data.keys()
+                or pandas.isnull(xls_data['IHM_mss_kinetic_rate_fret_analysis_id'][i])) \
+                else xls_data['IHM_mss_kinetic_rate_fret_analysis_id'][i]
+            cur_connection_kinetic_rate_fret_analysis_details = None if (
+                'IHM_mss_kinetic_rate_fret_analysis_details' not in xls_data.keys()
+                or pandas.isnull(xls_data['IHM_mss_kinetic_rate_fret_analysis_details'][i])) \
+                else xls_data['IHM_mss_kinetic_rate_fret_analysis_details'][i]
+
+            # Create the objects
+            # => Equilibrium constant
+            # First check whether both the value and the method are given
+            cur_eq_const = None
+            if (cur_kinetic_rate_eq_const_value is not None) and \
+                    (cur_kinetic_rate_eq_const_det_method is not None):
+                if cur_kinetic_rate_eq_const_det_method == \
+                        'equilibrium constant is determined from population':
+                    cur_eq_const = \
+                        ihm.multi_state_scheme.PopulationEquilibriumConstant(
+                            value=float(cur_kinetic_rate_eq_const_value),
+                            unit=cur_kinetic_rate_eq_const_unit)
+                elif cur_kinetic_rate_eq_const_det_method == \
+                    'equilibrium constant is determined from kinetic ' \
+                    'rates, kAB/kBA':
+                    cur_eq_const = \
+                        ihm.multi_state_scheme.KineticRateEquilibriumConstant(
+                            value=float(cur_kinetic_rate_eq_const_value),
+                            unit=cur_kinetic_rate_eq_const_unit)
+                elif cur_kinetic_rate_eq_const_det_method == \
+                    'equilibrium constant is determined from another ' \
+                    'method not listed':
+                    cur_eq_const = \
+                        ihm.multi_state_scheme.EquilibriumConstant(
+                            value=float(cur_kinetic_rate_eq_const_value),
+                            unit=cur_kinetic_rate_eq_const_unit)
+                else:
+                    raise ValueError('Kinetic rate equilibrium constant '
+                                     'determination method \'%s\' is not '
+                                     'valid.' % (cur_kinetic_rate_eq_const_det_method))
+            # => Kinetic rate
+            cur_kinetic_rate = None
+            # if either a transition rate constant or an equilibrium constant
+            # are given
+            if (cur_kinetic_rate_transition_rate_const_value is not None)\
+                    or (cur_eq_const is not None):
+
+                # find the dataset group if given
+                cur_kinetic_rate_dataset_group = None
+                if (cur_kinetic_rate_dataset_group_id is not None)\
+                    and (cur_kinetic_rate_dataset_group_id in self.list_dataset_group_ids):
+                    cur_kinetic_rate_dataset_group = \
+                        self.list_dataset_groups[
+                            self.list_dataset_group_ids.index(
+                                cur_kinetic_rate_dataset_group_id)]
+                # find the external file if given
+                cur_kinetic_rate_external_file = None
+                if (cur_kinetic_rate_external_file_id is not None)\
+                    and (cur_kinetic_rate_external_file_id in self.list_external_files_ids):
+                    cur_kinetic_rate_external_file = \
+                        self.list_external_files_locations[
+                            self.list_external_files_ids.index(
+                                cur_kinetic_rate_external_file_id)]
+
+                cur_kinetic_rate = ihm.multi_state_scheme.KineticRate(
+                    transition_rate_constant=
+                    float(cur_kinetic_rate_transition_rate_const_value),
+                    equilibrium_constant=cur_eq_const,
+                    details=cur_kinetic_rate_details,
+                    dataset_group=cur_kinetic_rate_dataset_group,
+                    file=cur_kinetic_rate_external_file)
+
+            # => Relaxation time
+            cur_relaxation_time = None
+            # Check whether the relaxation time information is there
+            # find the dataset group if given
+            cur_relaxation_time_dataset_group = None
+            if (cur_relaxation_time_dataset_group_id is not None) \
+                    and (cur_relaxation_time_dataset_group_id in
+                         self.list_dataset_group_ids):
+                cur_relaxation_time_dataset_group = \
+                    self.list_dataset_groups[
+                        self.list_dataset_group_ids.index(
+                            cur_relaxation_time_dataset_group_id)]
+            # find the external file if given
+            cur_relaxation_time_external_file = None
+            if (cur_relaxation_time_external_file_id is not None) \
+                    and (cur_relaxation_time_external_file_id in
+                         self.list_external_files_ids):
+                cur_relaxation_time_external_file = \
+                    self.list_external_files_locations[
+                        self.list_external_files_ids.index(
+                            cur_relaxation_time_external_file_id)]
+            if (cur_relaxation_time_value is not None) \
+                    and (cur_relaxation_time_unit is not None):
+                cur_relaxation_time = \
+                    ihm.multi_state_scheme.RelaxationTime(
+                        value=float(cur_relaxation_time_value),
+                        unit=cur_relaxation_time_unit,
+                        amplitude=float(cur_relaxation_time_amplitude)
+                        if cur_relaxation_time_amplitude is not None else None,
+                        details=cur_relaxation_time_details,
+                        dataset_group=cur_relaxation_time_dataset_group,
+                        file=cur_relaxation_time_external_file)
+
+            # => Connectivity
+            cur_connectivity = None
+            if cur_connectivity_start_state_id is not None:
+                cur_connectivity_dataset_group = None
+                if (cur_connectivity_dataset_group_id is not None) \
+                        and (cur_connectivity_dataset_group_id in
+                             self.list_dataset_group_ids):
+                    cur_connectivity_dataset_group = \
+                        self.list_dataset_groups[
+                            self.list_dataset_group_ids.index(
+                                cur_connectivity_dataset_group_id)]
+                cur_connectivity_start_state = \
+                    self.list_models_states[
+                        self.list_models_state_ids.index(
+                            cur_connectivity_start_state_id)]
+                cur_connectivity_end_state = None if (
+                        cur_connectivity_end_state_id is None) \
+                    else self.list_models_states[
+                    self.list_models_state_ids.index(
+                        cur_connectivity_end_state_id)]
+                # Create the connectivity. Add the relaxation time only if the
+                # cur_relaxation_time_assignment_choice is "Connectivity".
+                cur_connectivity = ihm.multi_state_scheme.Connectivity(
+                    begin_state=cur_connectivity_start_state,
+                    end_state=cur_connectivity_end_state,
+                    details=cur_connectivity_details,
+                    dataset_group=cur_connectivity_dataset_group,
+                    kinetic_rate=cur_kinetic_rate,
+                    relaxation_time=cur_relaxation_time if
+                    (cur_relaxation_time_assignment_choice == 'Connectivity')
+                    else None
+                )
+
+            # => Multi-state scheme
+            cur_multi_state_scheme = None
+            # if the scheme_id already exists, then we retrieve the object
+            if cur_scheme_id in self.list_ihm_multi_state_scheme_ids:
+                cur_multi_state_scheme = \
+                    self.list_ihm_multi_state_schemes[
+                        self.list_ihm_multi_state_scheme_ids.index(
+                            cur_scheme_id)]
+            # otherwise, we create a new one
+            else:
+                cur_multi_state_scheme = \
+                    ihm.multi_state_scheme.MultiStateScheme(
+                        name=cur_scheme_name,
+                        details=cur_scheme_details)
+                self.list_ihm_multi_state_schemes.append(cur_multi_state_scheme)
+                self.list_ihm_multi_state_scheme_ids.append(cur_scheme_id)
+            # add the current connectivity
+            if cur_connectivity is not None:
+                cur_multi_state_scheme.add_connectivity(cur_connectivity)
+            # add the current relaxation time if it is assigned to the scheme
+            if (cur_relaxation_time is not None) \
+                and (cur_relaxation_time_assignment_choice == 'Multi-state scheme'):
+                cur_multi_state_scheme.add_relaxation_time(cur_relaxation_time)
+
+            # => RelaxationTime to FRET analysis connection
+            if (cur_connection_relaxation_time_fret_analysis_id is not None)\
+                    and (cur_connection_relaxation_time_fret_analysis_id in
+                         self.list_fret_analysis_ids)\
+                    and cur_relaxation_time is not None:
+                cur_fret_analysis_for_rt = \
+                    self.list_fret_analysis[
+                        self.list_fret_analysis_ids.index(
+                            cur_connection_relaxation_time_fret_analysis_id)]
+                cur_connection_rt_to_fret_analysis = \
+                    ihm.flr.RelaxationTimeFretAnalysisConnection(
+                        fret_analysis=cur_fret_analysis_for_rt,
+                        relaxation_time=cur_relaxation_time,
+                        details=cur_connection_relaxation_time_fret_analysis_details)
+                self.list_ihm_mss_relaxation_time_fret_analysis_connections.append(
+                    cur_connection_rt_to_fret_analysis)
+            # => KineticRate to FRET analysis connection
+            if (cur_connection_kinetic_rate_fret_analysis_id is not None)\
+                    and (cur_connection_kinetic_rate_fret_analysis_id in \
+                    self.list_fret_analysis_ids)\
+                    and cur_kinetic_rate is not None:
+                cur_fret_analysis_for_kr = \
+                    self.list_fret_analysis[
+                        self.list_fret_analysis_ids.index(
+                            cur_connection_kinetic_rate_fret_analysis_id)]
+                cur_connection_kr_to_fret_analysis = \
+                    ihm.flr.KineticRateFretAnalysisConnection(
+                        fret_analysis=cur_fret_analysis_for_kr,
+                        kinetic_rate=cur_kinetic_rate,
+                        details=cur_connection_kinetic_rate_fret_analysis_details)
+                self.list_ihm_mss_kinetic_rate_fret_analysis_connections.append(
+                    cur_connection_kr_to_fret_analysis)
+
+        # Add the multi-state schemes to the ihm system
+        self.system.multi_state_schemes = self.list_ihm_multi_state_schemes
+
+
     def create_flrdata(self):
         """Create the FLRData object"""
         FLR_collection1 = ihm.flr.FLRData()
@@ -5318,6 +5642,17 @@ class Excel2mmcifConverter:
         for entry in self.list_flr_model_distances:
             FLR_collection1.fret_model_distances.append(entry)
 
+        # add the connection between relaxation times (from multi-state scheme)
+        # and fret analyses
+        for entry in self.list_ihm_mss_relaxation_time_fret_analysis_connections:
+            FLR_collection1.relaxation_time_fret_analysis_connections.append(entry)
+
+        # add the connection between kinetic rates (from multi-state scheme)
+        # and fret analyses
+        for entry in self.list_ihm_mss_kinetic_rate_fret_analysis_connections:
+            FLR_collection1.kinetic_rate_fret_analysis_connections.append(entry)
+
+        # add the flr_data object to the system
         self.system.flr_data = [FLR_collection1]
 
         # Check for struct_assemblies that were not used elsewhere and add
@@ -5340,7 +5675,6 @@ class Excel2mmcifConverter:
 
         if self.verbose:
             print('Done.')
-
 
     def handle_atom_site_file(self):
         """Handle the atom_site entries for the models.
@@ -5510,7 +5844,7 @@ class Excel2mmcifConverter:
         for entry in atom_types:
             outfile.write('%s\n' % (entry))
         outfile.write('#\n')
-        ## Write the atom_site entries
+        # Write the atom_site entries
         outfile.write('#\n')
         outfile.write('loop_\n')
         for entry in header:
@@ -5643,7 +5977,7 @@ if __name__ == '__main__':
     atom_site_filename = None
     if DEBUG:
         parameter_requirement = False
-    ## Command line parameters
+    # Command line parameters
     parser = argparse.ArgumentParser(
         description='Read an excel file and convert it the information '
                     'to mmcif.')
