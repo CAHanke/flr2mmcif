@@ -4126,7 +4126,7 @@ class Excel2mmcifConverter:
                         cur_mutated_residue_donor_chem_comp)
                 else:
                     cur_mutated_residue_donor_chem_comp = \
-                        [x for x in list_chemical_components
+                        [x for x in self.list_chemical_components
                          if x.__dict__ == cur_mutated_residue_donor_chem_comp.__dict__][0]
 
                 cur_mutated_residue_donor_index = -1
