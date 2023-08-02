@@ -1,7 +1,8 @@
-# This script reads in a excel file of a fixed format and uses the python-ihm
+
+# Copyright (c) 2019-2023 Christian A. Hanke
+
+# This script reads in an excel file of a fixed format and uses the python-ihm
 # implementation to generate the objects and write the mmcif file in the end
-# Christian Hanke 11.03.2019
-# christian.hanke@hhu.de
 # version 1.06
 
 # Note: In case of non-mandatory parameters, it should be checked whether the

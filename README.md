@@ -3,7 +3,7 @@ The python script converts the information in the filled excel template to a mmc
 This includes the part for the fluorescence (FLR) dictionary.
 
 ## Requirements
-The script requires Python3 with ihm, pandas, and xlrd installed.
+The script requires Python3 with ihm, and pandas installed.
 
 ## Usage
 
