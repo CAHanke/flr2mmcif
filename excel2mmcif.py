@@ -1,5 +1,5 @@
 
-# Copyright (c) 2019-2023 Christian A. Hanke
+# Copyright (c) 2019-2024 Christian A. Hanke
 
 # This script reads in an excel file of a fixed format and uses the python-ihm
 # implementation to generate the objects and write the mmcif file in the end
