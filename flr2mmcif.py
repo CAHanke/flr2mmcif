@@ -1,8 +1,9 @@
 
 # Copyright (c) 2019-2024 Christian A. Hanke
 
-# This script reads in an excel file of a fixed format and uses the python-ihm
-# implementation to generate the objects and write the mmcif file in the end
+# This script reads in an spreadsheet file (e.g. Microsoft Excel) of a fixed
+# format and uses the python-ihm implementation to generate the objects and
+# write the mmcif file in the end
 # version 1.06
 
 # Note: In case of non-mandatory parameters, it should be checked whether the
@@ -98,26 +99,26 @@ def get_resatom_from_list(curobject, list):
     return None
 
 
-class Excel2mmcifConverter:
+class Flr2mmcifConverter:
     def __init__(self,
-                 excel_filename,
+                 xls_filename,
                  cifout_filename,
                  atom_site_filename,
                  be_verbose=True):
         self.verbose=be_verbose
-        self.excel_filename = excel_filename
+        self.xls_filename = xls_filename
         self.cifout_filename = cifout_filename
         self.atom_site_filename = atom_site_filename
 
         # Create an IHM system
         self.system = ihm.System()
         # Create an excel file object
-        self.xls_file = pandas.ExcelFile(self.excel_filename)
+        self.xls_file = pandas.ExcelFile(self.xls_filename)
         # Prepare the lists to store data
         self.initialize_lists()
 
     def run(self):
-        """Read and process the data from the excel sheet, and write the cif file"""
+        """Read and process the data from the spreadsheet, and write the cif file"""
         # Fill all the data
         self.fill()
         # Write the file
@@ -5707,7 +5708,7 @@ class Excel2mmcifConverter:
             temp_atom_site_systems = ihm.reader.read(fh)
         cur_temp_atom_site_system = temp_atom_site_systems[0]
         # We assume that the model_ids are in the same order as the model
-        # ids that are given int he excel sheet.
+        # ids that are given in the excel sheet.
         # system._all_models() returns model_group and model.
         # So we only take the second entry in the tuple
         list_models_ids_string = [str(x) for x in self.list_models_ids]
@@ -5958,32 +5959,32 @@ class Excel2mmcifConverter:
                 new_atom_site_filename))
             return new_atom_site_filename
 
-def main(excel_filename, cifout_filename, atom_site_filename):
+def main(xls_filename, cifout_filename, atom_site_filename):
     # For debugging: use default values
     if DEBUG:
-        excel_filename = 'excel_example.xlsx'
+        xls_filename = 'xls_example.xlsx'
         cifout_filename = 'sample_output.cif'
         atom_site_filename = 'atom_site_input_example.cif'
-    this_excel2mmcif_converter = Excel2mmcifConverter(
-        excel_filename=excel_filename,
+    this_flr2mmcif_converter = Flr2mmcifConverter(
+        xls_filename=xls_filename,
         cifout_filename=cifout_filename,
         atom_site_filename=atom_site_filename)
-    this_excel2mmcif_converter.run()
+    this_flr2mmcif_converter.run()
 
 if __name__ == '__main__':
     # For debugging, make the parameters not required
     parameter_requirement = True
-    excel_filename = None
+    xls_filename = None
     cifout_filename = None
     atom_site_filename = None
     if DEBUG:
         parameter_requirement = False
     # Command line parameters
     parser = argparse.ArgumentParser(
-        description='Read an excel file and convert it the information '
-                    'to mmcif.')
+        description='Read a spreadsheet (e.g. excel) file and convert the '
+                    'information to mmcif.')
     parser.add_argument(
-        '--excel', '-e', nargs=1, help='Name of the excel file to be read.',
+        '--xls', '-x', nargs=1, help='Name of the spreadsheet file to be read.',
         required=parameter_requirement)
     parser.add_argument(
         '--cif', '-c', nargs=1, help='Name of the mmcif file to be generated.',
@@ -5995,8 +5996,8 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     if not DEBUG:
-        excel_filename = args.excel[0]
+        xls_filename = args.xls[0]
         cifout_filename = args.cif[0]
         atom_site_filename = args.atoms[0]
 
-    main(excel_filename, cifout_filename, atom_site_filename)
+    main(xls_filename, cifout_filename, atom_site_filename)
