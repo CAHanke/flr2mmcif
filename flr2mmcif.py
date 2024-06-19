@@ -1859,10 +1859,14 @@ class Flr2mmcifConverter:
         self.system.state_groups.append(cur_state_group)
 
     def add_ihm_ensemble(self,
-                         sheet_name='Ensemble Info',
+                         sheet_name='Collection of models',
                          skiprows=3,
                          header=0):
-        """Read the IHM ensemble information from the excel sheet."""
+        """Read the IHM collection of models (previously ensemble information)
+           from the excel sheet."""
+        # Note: "Ensemble" is not used by the IHMCIF dictionary anymore
+        # Once all the "ensemble" terms are changed in the dictionary and in
+        # python-ihm, this will need to be changed here as well.
         xls_data = pandas.read_excel(self.xls_file,
                                      sheet_name=sheet_name,
                                      skiprows=skiprows,

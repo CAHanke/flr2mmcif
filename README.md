@@ -1,6 +1,6 @@
 # flr2mmcif
 The python script converts the information in the filled spreadsheet template to a mmcif file for PDB-Dev. 
-This includes the part for the fluorescence (FLR) dictionary.
+This includes the part for the fluorescence (flrCIF) dictionary.
 
 ## Requirements
 The script requires Python3 with ihm, and pandas installed.
@@ -29,7 +29,10 @@ The script requires Python3 with ihm, and pandas installed.
 
 #### 4. After generation, it is recommended to check the resulting mmcif file whether the output is what was expected.
 
+## Documentation
+An overview of the content in the spreadsheet can be found in [Documentation](/documentation/overview_collected_info_in_template.pdf)
+
 ## References
-The python-ihm package and the IHM and FLR dictionaries can be found on https://github.com/ihmwg
+The python-ihm package and the IHMCIF and flrCIF dictionaries can be found on https://github.com/ihmwg
 
 PDB-Dev: https://pdb-dev.wwpdb.org/
