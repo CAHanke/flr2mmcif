@@ -1500,9 +1500,9 @@ class Flr2mmcifConverter:
         if self.verbose:
             print(' ... Processing tab \'Modeling_protocol\' ...')
         xls_data_protocol = pandas.read_excel(self.xls_file,
-                                              sheet_name='Modeling_protocol',
-                                              skiprows=3,
-                                              header=0)
+                                              sheet_name=sheet_name_protocol,
+                                              skiprows=skiprows_protocol,
+                                              header=header_protocol)
         nr_entries_protocol = \
             len(xls_data_protocol['IHM_Modeling_protocol_Ordinal'])
 
