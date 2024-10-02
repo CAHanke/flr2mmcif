@@ -14,6 +14,7 @@
 # ensure proper output in the mmcif files of the unicode strings.
 # Note: The script requires the python ihm, pandas, and openpyxl
 
+import os
 import pandas
 import argparse
 import ihm
@@ -1386,10 +1387,19 @@ class Flr2mmcifConverter:
                             xls_data_post['IHM_Post_process_Number_model_end'][i])) \
                     else int(xls_data_post['IHM_Post_process_Number_model_end'][i])
             cur_post_process_software_id = \
-                xls_data_post['IHM_Post_process_Software_id'][i]
+                None if ('IHM_Post_process_Software_id' not in
+                         xls_data_post.keys() or pandas.isnull(
+                            xls_data_post['IHM_Post_process_Software_id'][i]))\
+                    else xls_data_post['IHM_Post_process_Software_id'][i]
 
             # Post-processing steps (ihm-analysis)
             cur_step = None
+            # Information on software is optional
+            cur_post_process_software = None if \
+                (cur_post_process_software_id is None) \
+                else self.list_ihm_softwares[
+                self.list_ihm_software_ids.index(
+                    cur_post_process_software_id)]
             if cur_post_process_type == 'cluster':
                 cur_step = ihm.analysis.ClusterStep(
                     feature=cur_post_process_feature,
@@ -1401,9 +1411,7 @@ class Flr2mmcifConverter:
                     dataset_group=self.list_dataset_groups[
                         self.list_dataset_group_ids.index(
                             cur_post_process_dataset_group_id)],
-                    software=self.list_ihm_softwares[
-                        self.list_ihm_software_ids.index(
-                            cur_post_process_software_id)])
+                    software=cur_post_process_software)
             if cur_post_process_type == 'filter':
                 cur_step = ihm.analysis.FilterStep(
                     feature=cur_post_process_feature,
@@ -1415,9 +1423,7 @@ class Flr2mmcifConverter:
                     dataset_group=self.list_dataset_groups[
                         self.list_dataset_group_ids.index(
                             cur_post_process_dataset_group_id)],
-                    software=self.list_ihm_softwares[
-                        self.list_ihm_software_ids.index(
-                            cur_post_process_software_id)])
+                    software=cur_post_process_software)
 
             if cur_post_process_type == 'rescore':
                 cur_step = ihm.analysis.RescoreStep(
@@ -1430,9 +1436,7 @@ class Flr2mmcifConverter:
                     dataset_group=self.list_dataset_groups[
                         self.list_dataset_group_ids.index(
                             cur_post_process_dataset_group_id)],
-                    software=self.list_ihm_softwares[
-                        self.list_ihm_software_ids.index(
-                            cur_post_process_software_id)])
+                    software=cur_post_process_software)
 
             if cur_post_process_type == 'validation':
                 cur_step = ihm.analysis.ValidationStep(
@@ -1445,9 +1449,7 @@ class Flr2mmcifConverter:
                     dataset_group=self.list_dataset_groups[
                         self.list_dataset_group_ids.index(
                             cur_post_process_dataset_group_id)],
-                    software=self.list_ihm_softwares[
-                        self.list_ihm_software_ids.index(
-                            cur_post_process_software_id)])
+                    software=cur_post_process_software)
 
             if cur_post_process_type == 'none':
                 cur_step = ihm.analysis.EmptyStep(
@@ -1460,9 +1462,7 @@ class Flr2mmcifConverter:
                     dataset_group=self.list_dataset_groups[
                         self.list_dataset_group_ids.index(
                             cur_post_process_dataset_group_id)],
-                    software=self.list_ihm_softwares[
-                        self.list_ihm_software_ids.index(
-                            cur_post_process_software_id)])
+                    software=cur_post_process_software)
 
             if cur_post_process_type == 'other':
                 cur_step = ihm.analysis.Step(
@@ -1475,9 +1475,7 @@ class Flr2mmcifConverter:
                     dataset_group=self.list_dataset_groups[
                         self.list_dataset_group_ids.index(
                             cur_post_process_dataset_group_id)],
-                    software=self.list_ihm_softwares[
-                        self.list_ihm_software_ids.index(
-                            cur_post_process_software_id)])
+                    software=cur_post_process_software)
 
             # store the step for later addition to an Analysis object and also
             # store the id
@@ -1556,14 +1554,23 @@ class Flr2mmcifConverter:
                 xls_data_protocol['IHM_Modeling_protocol_Ensemble_flag'][i] in \
                 ['Yes', 'YES', 'yes']
             cur_modeling_protocol_software_id = \
-                xls_data_protocol['IHM_Modeling_protocol_Software_id'][i]
+                None if ('IHM_Modeling_protocol_Software_id' not in
+                         xls_data_protocol.keys() or pandas.isnull(
+                            xls_data_protocol['IHM_Modeling_protocol_Software_id'][i])) \
+                    else xls_data_protocol['IHM_Modeling_protocol_Software_id'][i]
 
             # store the software used for the current modeling protocol ordinal
-            self.dict_ihm_modeling_protocol_software_ids[
-                cur_modeling_protocol_ordinal] = \
-                cur_modeling_protocol_software_id
+            if cur_modeling_protocol_software_id is not None:
+                self.dict_ihm_modeling_protocol_software_ids[
+                    cur_modeling_protocol_ordinal] = \
+                    cur_modeling_protocol_software_id
 
             cur_step = None
+            # Information on Software is optional
+            cur_modeling_protocol_software = None if \
+                (cur_modeling_protocol_software_id is None) \
+                else self.list_ihm_softwares[self.list_ihm_software_ids.index(
+                        cur_modeling_protocol_software_id)]
             # Protocol steps
             cur_step = ihm.protocol.Step(
                 assembly=self.list_structure_assemblies[
@@ -1575,9 +1582,7 @@ class Flr2mmcifConverter:
                 method=cur_modeling_protocol_step_method,
                 num_models_begin=cur_modeling_protocol_number_model_begin,
                 num_models_end=cur_modeling_protocol_number_model_end,
-                software=self.list_ihm_softwares[
-                    self.list_ihm_software_ids.index(
-                        cur_modeling_protocol_software_id)],
+                software=cur_modeling_protocol_software,
                 multi_scale=cur_modeling_protocol_multi_scale_flag,
                 multi_state=cur_modeling_protocol_multi_state_flag,
                 ordered=cur_modeling_protocol_ordered_flag,
@@ -4971,56 +4976,57 @@ class Flr2mmcifConverter:
             # for each modeling step that include FPS
             for this_ihm_modeling_protocol_id in self.list_ihm_modeling_protocols:
                 for this_step in this_ihm_modeling_protocol_id.steps:
-                    if 'FPS' in this_step.software.name or 'Olga' in this_step.software.name:
-                        # The fps global parameters are stored by protocol id
-                        # and then by step id. To get to this, we have to go
-                        # via the protocol id that is stored in
-                        # self.list_ihm_modeling_protocols_ids
-                        this_fps_global_parameters = \
-                            self.dict_flr_fps_global_parameters_by_protocol_id[
-                                self.list_ihm_modeling_protocols_ids[
-                                    self.list_ihm_modeling_protocols.index(
-                                        this_ihm_modeling_protocol_id)]][
-                                self.list_ihm_modeling_protocol_modeling_step_ids[
-                                    self.list_ihm_modeling_protocol_modeling_steps.index(
-                                        this_step)]]
-                        # donor
-                        if 'AV_modeling_method_donor' in self.list_of_object_indices[i].keys():
-                            cur_FPS_modeling_AV = ihm.flr.FPSModeling(
-                                protocol=this_step,
-                                restraint_group=self.list_fret_distance_restraint_groups[
-                                    self.list_of_object_indices[i]['FRET_distance_restraint_group']],
-                                global_parameter=this_fps_global_parameters,
-                                probe_modeling_method=self.list_of_object_indices[i]['AV_modeling_method_donor'],
-                                details=this_step.name)
-                            cur_FPS_modeling_AV_index = -1
-                            if cur_FPS_modeling_AV not in self.list_FPS_modeling_by_AV:
-                                self.list_FPS_modeling_by_AV.append(cur_FPS_modeling_AV)
-                            cur_FPS_modeling_AV_index = \
-                                self.list_FPS_modeling_by_AV.index(cur_FPS_modeling_AV)
-                            if 'FPS_modeling_AV_donor' not in self.list_of_object_indices[i].keys():
-                                self.list_of_object_indices[i]['FPS_modeling_AV_donor'] = []
-                            self.list_of_object_indices[i][
-                                'FPS_modeling_AV_donor'].append(cur_FPS_modeling_AV_index)
+                    if this_step.software is not None:
+                        if 'FPS' in this_step.software.name or 'Olga' in this_step.software.name:
+                            # The fps global parameters are stored by protocol id
+                            # and then by step id. To get to this, we have to go
+                            # via the protocol id that is stored in
+                            # self.list_ihm_modeling_protocols_ids
+                            this_fps_global_parameters = \
+                                self.dict_flr_fps_global_parameters_by_protocol_id[
+                                    self.list_ihm_modeling_protocols_ids[
+                                        self.list_ihm_modeling_protocols.index(
+                                            this_ihm_modeling_protocol_id)]][
+                                    self.list_ihm_modeling_protocol_modeling_step_ids[
+                                        self.list_ihm_modeling_protocol_modeling_steps.index(
+                                            this_step)]]
+                            # donor
+                            if 'AV_modeling_method_donor' in self.list_of_object_indices[i].keys():
+                                cur_FPS_modeling_AV = ihm.flr.FPSModeling(
+                                    protocol=this_step,
+                                    restraint_group=self.list_fret_distance_restraint_groups[
+                                        self.list_of_object_indices[i]['FRET_distance_restraint_group']],
+                                    global_parameter=this_fps_global_parameters,
+                                    probe_modeling_method=self.list_of_object_indices[i]['AV_modeling_method_donor'],
+                                    details=this_step.name)
+                                cur_FPS_modeling_AV_index = -1
+                                if cur_FPS_modeling_AV not in self.list_FPS_modeling_by_AV:
+                                    self.list_FPS_modeling_by_AV.append(cur_FPS_modeling_AV)
+                                cur_FPS_modeling_AV_index = \
+                                    self.list_FPS_modeling_by_AV.index(cur_FPS_modeling_AV)
+                                if 'FPS_modeling_AV_donor' not in self.list_of_object_indices[i].keys():
+                                    self.list_of_object_indices[i]['FPS_modeling_AV_donor'] = []
+                                self.list_of_object_indices[i][
+                                    'FPS_modeling_AV_donor'].append(cur_FPS_modeling_AV_index)
 
-                        # acceptor
-                        if 'AV_modeling_method_acceptor' in self.list_of_object_indices[i].keys():
-                            cur_FPS_modeling_AV = ihm.flr.FPSModeling(
-                                protocol=this_step,
-                                restraint_group=self.list_fret_distance_restraint_groups[
-                                    self.list_of_object_indices[i]['FRET_distance_restraint_group']],
-                                global_parameter=this_fps_global_parameters,
-                                probe_modeling_method=self.list_of_object_indices[i]['AV_modeling_method_acceptor'],
-                                details=this_step.name)
-                            cur_FPS_modeling_AV_index = -1
-                            if cur_FPS_modeling_AV not in self.list_FPS_modeling_by_AV:
-                                self.list_FPS_modeling_by_AV.append(cur_FPS_modeling_AV)
-                            cur_FPS_modeling_AV_index = \
-                                self.list_FPS_modeling_by_AV.index(cur_FPS_modeling_AV)
-                            if 'FPS_modeling_AV_acceptor' not in self.list_of_object_indices[i].keys():
-                                self.list_of_object_indices[i]['FPS_modeling_AV_acceptor'] = []
-                            self.list_of_object_indices[i][
-                                'FPS_modeling_AV_acceptor'].append(cur_FPS_modeling_AV_index)
+                            # acceptor
+                            if 'AV_modeling_method_acceptor' in self.list_of_object_indices[i].keys():
+                                cur_FPS_modeling_AV = ihm.flr.FPSModeling(
+                                    protocol=this_step,
+                                    restraint_group=self.list_fret_distance_restraint_groups[
+                                        self.list_of_object_indices[i]['FRET_distance_restraint_group']],
+                                    global_parameter=this_fps_global_parameters,
+                                    probe_modeling_method=self.list_of_object_indices[i]['AV_modeling_method_acceptor'],
+                                    details=this_step.name)
+                                cur_FPS_modeling_AV_index = -1
+                                if cur_FPS_modeling_AV not in self.list_FPS_modeling_by_AV:
+                                    self.list_FPS_modeling_by_AV.append(cur_FPS_modeling_AV)
+                                cur_FPS_modeling_AV_index = \
+                                    self.list_FPS_modeling_by_AV.index(cur_FPS_modeling_AV)
+                                if 'FPS_modeling_AV_acceptor' not in self.list_of_object_indices[i].keys():
+                                    self.list_of_object_indices[i]['FPS_modeling_AV_acceptor'] = []
+                                self.list_of_object_indices[i][
+                                    'FPS_modeling_AV_acceptor'].append(cur_FPS_modeling_AV_index)
 
         for i in range(nr_entries):
             # donor
@@ -5138,57 +5144,58 @@ class Flr2mmcifConverter:
             # For each modeling step that include FPS
             for this_ihm_modeling_protocol_id in self.list_ihm_modeling_protocols:
                 for this_step in this_ihm_modeling_protocol_id.steps:
-                    if 'FPS' in this_step.software.name or 'Olga' in this_step.software.name:
-                        # the fps global parameters are stored by protocol id
-                        # and then by step id
-                        # to get to this, we have to go via the protocol id
-                        # that is stored in list_ihm_modeling_protocols_ids
-                        this_fps_global_parameters = \
-                            self.dict_flr_fps_global_parameters_by_protocol_id[
-                                self.list_ihm_modeling_protocols_ids[
-                                    self.list_ihm_modeling_protocols.index(
-                                        this_ihm_modeling_protocol_id)]][
-                                self.list_ihm_modeling_protocol_modeling_step_ids[
-                                    self.list_ihm_modeling_protocol_modeling_steps.index(
-                                        this_step)]]
-                        # donor
-                        if 'FPS_mean_probe_position_donor' in self.list_of_object_indices[i].keys():
-                            cur_FPS_modeling_MPP = ihm.flr.FPSModeling(
-                                protocol=this_step,
-                                restraint_group=
-                                self.list_fret_distance_restraint_groups[
-                                    self.list_of_object_indices[i]['FRET_distance_restraint_group']],
-                                global_parameter=this_fps_global_parameters,
-                                probe_modeling_method='MPP',
-                                details=this_step.name)
-                            cur_FPS_modeling_MPP_index = -1
-                            if cur_FPS_modeling_MPP not in self.list_FPS_modeling_by_MPP:
-                                self.list_FPS_modeling_by_MPP.append(cur_FPS_modeling_MPP)
-                            cur_FPS_modeling_MPP_index = \
-                                self.list_FPS_modeling_by_MPP.index(cur_FPS_modeling_MPP)
-                            if 'FPS_modeling_MPP_donor' not in self.list_of_object_indices[i].keys():
-                                self.list_of_object_indices[i]['FPS_modeling_MPP_donor'] = []
-                            self.list_of_object_indices[i][
-                                'FPS_modeling_MPP_donor'].append(cur_FPS_modeling_MPP_index)
-                        # acceptor
-                        if 'FPS_mean_probe_position_acceptor' in self.list_of_object_indices[i].keys():
-                            cur_FPS_modeling_MPP = ihm.flr.FPSModeling(
-                                protocol=this_step,
-                                restraint_group=
-                                self.list_fret_distance_restraint_groups[
-                                    self.list_of_object_indices[i]['FRET_distance_restraint_group']],
-                                global_parameter=this_fps_global_parameters,
-                                probe_modeling_method='MPP',
-                                details=this_step.name)
-                            cur_FPS_modeling_MPP_index = -1
-                            if cur_FPS_modeling_MPP not in self.list_FPS_modeling_by_MPP:
-                                self.list_FPS_modeling_by_MPP.append(cur_FPS_modeling_MPP)
-                            cur_FPS_modeling_MPP_index = \
-                                self.list_FPS_modeling_by_MPP.index(cur_FPS_modeling_MPP)
-                            if 'FPS_modeling_MPP_acceptor' not in self.list_of_object_indices[i].keys():
-                                self.list_of_object_indices[i]['FPS_modeling_MPP_acceptor'] = []
-                            self.list_of_object_indices[i][
-                                'FPS_modeling_MPP_acceptor'].append(cur_FPS_modeling_MPP_index)
+                    if this_step.software is not None:
+                        if 'FPS' in this_step.software.name or 'Olga' in this_step.software.name:
+                            # the fps global parameters are stored by protocol id
+                            # and then by step id
+                            # to get to this, we have to go via the protocol id
+                            # that is stored in list_ihm_modeling_protocols_ids
+                            this_fps_global_parameters = \
+                                self.dict_flr_fps_global_parameters_by_protocol_id[
+                                    self.list_ihm_modeling_protocols_ids[
+                                        self.list_ihm_modeling_protocols.index(
+                                            this_ihm_modeling_protocol_id)]][
+                                    self.list_ihm_modeling_protocol_modeling_step_ids[
+                                        self.list_ihm_modeling_protocol_modeling_steps.index(
+                                            this_step)]]
+                            # donor
+                            if 'FPS_mean_probe_position_donor' in self.list_of_object_indices[i].keys():
+                                cur_FPS_modeling_MPP = ihm.flr.FPSModeling(
+                                    protocol=this_step,
+                                    restraint_group=
+                                    self.list_fret_distance_restraint_groups[
+                                        self.list_of_object_indices[i]['FRET_distance_restraint_group']],
+                                    global_parameter=this_fps_global_parameters,
+                                    probe_modeling_method='MPP',
+                                    details=this_step.name)
+                                cur_FPS_modeling_MPP_index = -1
+                                if cur_FPS_modeling_MPP not in self.list_FPS_modeling_by_MPP:
+                                    self.list_FPS_modeling_by_MPP.append(cur_FPS_modeling_MPP)
+                                cur_FPS_modeling_MPP_index = \
+                                    self.list_FPS_modeling_by_MPP.index(cur_FPS_modeling_MPP)
+                                if 'FPS_modeling_MPP_donor' not in self.list_of_object_indices[i].keys():
+                                    self.list_of_object_indices[i]['FPS_modeling_MPP_donor'] = []
+                                self.list_of_object_indices[i][
+                                    'FPS_modeling_MPP_donor'].append(cur_FPS_modeling_MPP_index)
+                            # acceptor
+                            if 'FPS_mean_probe_position_acceptor' in self.list_of_object_indices[i].keys():
+                                cur_FPS_modeling_MPP = ihm.flr.FPSModeling(
+                                    protocol=this_step,
+                                    restraint_group=
+                                    self.list_fret_distance_restraint_groups[
+                                        self.list_of_object_indices[i]['FRET_distance_restraint_group']],
+                                    global_parameter=this_fps_global_parameters,
+                                    probe_modeling_method='MPP',
+                                    details=this_step.name)
+                                cur_FPS_modeling_MPP_index = -1
+                                if cur_FPS_modeling_MPP not in self.list_FPS_modeling_by_MPP:
+                                    self.list_FPS_modeling_by_MPP.append(cur_FPS_modeling_MPP)
+                                cur_FPS_modeling_MPP_index = \
+                                    self.list_FPS_modeling_by_MPP.index(cur_FPS_modeling_MPP)
+                                if 'FPS_modeling_MPP_acceptor' not in self.list_of_object_indices[i].keys():
+                                    self.list_of_object_indices[i]['FPS_modeling_MPP_acceptor'] = []
+                                self.list_of_object_indices[i][
+                                    'FPS_modeling_MPP_acceptor'].append(cur_FPS_modeling_MPP_index)
         # Connect FPS_modeling with the Mean probe position and the mpp_atom_position_group
         for i in range(nr_entries):
             # donor
@@ -5696,7 +5703,14 @@ class Flr2mmcifConverter:
         # be assigned to this model_group.
         # This collection of models is separate from the system.
         # Only the atoms for the models will be taken from it.
-
+        if self.atom_site_filename is None:
+            print("Warning! No filename given for information on atom_site "
+                  "entries. Continuing without atom_site entries.")
+            return
+        if not os.path.isfile(self.atom_site_filename):
+            print("Warning! File \'%s\' not found. Continuing without using "
+                  "the information on the atom_site entries.")
+            return
         # First check whether all the information is in the atom_site file.
         # If not everything requires is present, it is added to a new file
         new_atom_site_filename = self.check_atom_site_file_for_model_list(
