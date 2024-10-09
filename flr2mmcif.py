@@ -5679,6 +5679,26 @@ class Flr2mmcifConverter:
             if not occurs_in_list(entry, seen_assemblies):
                 self.system.orphan_assemblies.append(entry)
 
+        # Check for datasets and dataset_groups that were not used elsewhere
+        # and add them to system.orphan_datasets and
+        # system.orphan_dataset_groups
+        seen_dataset_groups = []
+        for entry in self.list_ihm_modeling_protocol_analysis_steps:
+            seen_dataset_groups.append(entry.dataset_group)
+        for entry in self.list_ihm_modeling_protocol_modeling_steps:
+            seen_dataset_groups.append(entry.dataset_group)
+        for entry in self.list_dataset_groups:
+            if not occurs_in_list(entry, seen_dataset_groups):
+                self.system.orphan_dataset_groups.append(entry)
+        # The following might not be necessary
+#        seen_datasets = []
+#        for dg in seen_dataset_groups:
+#            for entry in dg:
+#                seen_datasets.append(entry)
+#        for entry in self.list_datasets:
+#            if not occurs_in_list(entry, seen_datasets):
+#                self.system.orphan_datasets.append(entry)
+
     def write_cif_file(self):
         """Write the system to a cif file."""
         if self.verbose:
