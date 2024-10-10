@@ -1648,7 +1648,7 @@ class Flr2mmcifConverter:
 
     def add_ihm_multi_state_modeling_and_models(
             self,
-            sheet_name_multi_state_modeling='Multi-state modeling',
+            sheet_name_multi_state_modeling='Multi_state_modeling',
             skiprows_multi_state_modeling=3,
             header_multi_state_modeling=0,
             sheet_name_models='Models',
@@ -1657,7 +1657,7 @@ class Flr2mmcifConverter:
         """Read multi-state modeling information from the excel sheet"""
         # Multi-state modeling
         if self.verbose:
-            print(" ... Processing tab \'Multi-state modeling\' ...")
+            print(" ... Processing tab \'Multi_state_modeling\' ...")
         xls_data_multi = pandas.read_excel(
             self.xls_file,
             sheet_name=sheet_name_multi_state_modeling,
@@ -1864,7 +1864,7 @@ class Flr2mmcifConverter:
         self.system.state_groups.append(cur_state_group)
 
     def add_ihm_ensemble(self,
-                         sheet_name='Collection of models',
+                         sheet_name='Collection_of_models',
                          skiprows=3,
                          header=0):
         """Read the IHM collection of models (previously ensemble information)
@@ -5324,14 +5324,14 @@ class Flr2mmcifConverter:
                 self.list_flr_model_distances.append(cur_flr_fret_model_distance)
 
     def add_ihm_multi_state_schemes(self,
-                                    sheet_name='Multi-state scheme',
+                                    sheet_name='Multi_state_scheme',
                                     skiprows=3,
                                     header=0):
         """Read information on multi-state schemes from the excel sheet."""
         if not sheet_name in self.xls_file.sheet_names:
             return
         if self.verbose:
-            print("... Processing tab \'Multi-state scheme\' ...")
+            print("... Processing tab \'Multi_state_scheme\' ...")
         xls_data = pandas.read_excel(self.xls_file,
                                      sheet_name=sheet_name,
                                      skiprows=skiprows,
