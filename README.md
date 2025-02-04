@@ -1,6 +1,6 @@
 # flr2mmcif
 The python script converts the information in the filled spreadsheet template to a mmcif file for PDB-IHM. 
-This includes the part for the fluorescence (flrCIF) dictionary.
+This includes the part for the fluorescence (flrCIF) dictionary [![Hanke2024](https://img.shields.io/badge/DOI-10.1038%2Fs41592--024--02428--x-blue)](https://doi.org/10.1038/s41592-024-02428-x).
 
 ## Requirements
 The script requires Python3 with ihm, and pandas installed.
@@ -32,7 +32,11 @@ The script requires Python3 with ihm, and pandas installed.
 ## Documentation
 An overview of the content in the spreadsheet can be found in [Documentation](/documentation/overview_collected_info_in_template.pdf)
 
-## References
+## Citation
+When using flr2mmcif, please cite the following publication [![Hanke2024](https://img.shields.io/badge/DOI-10.1038%2Fs41592--024--02428--x-blue)](https://doi.org/10.1038/s41592-024-02428-x)
+> Hanke, C.A., Westbrook, J.D., Webb, B.M. et al. Making fluorescence-based integrative structures and associated kinetic information accessible. Nat Methods 21, 1970–1972 (2024); DOI: 10.1038/s41592-024-02428-x
+
+## See also
 The python-ihm package and the IHMCIF and flrCIF dictionaries can be found on https://github.com/ihmwg
 
 PDB-IHM: https://pdb-ihm.org/
