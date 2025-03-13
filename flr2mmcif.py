@@ -5675,9 +5675,12 @@ class Flr2mmcifConverter:
             seen_assemblies.append(entry.assembly)
         for entry in self.list_ihm_modeling_protocol_modeling_steps:
             seen_assemblies.append(entry.assembly)
-        for entry in self.list_structure_assemblies:
-            if not occurs_in_list(entry, seen_assemblies):
-                self.system.orphan_assemblies.append(entry)
+        # TODO: Check whether the following might be necessary:
+        # For now, it is taken out, since it might cause issues with
+        # structure assemblies present, which are not used in the models
+        #for entry in self.list_structure_assemblies:
+        #    if not occurs_in_list(entry, seen_assemblies):
+        #        self.system.orphan_assemblies.append(entry)
 
         # Check for datasets and dataset_groups that were not used elsewhere
         # and add them to system.orphan_datasets and
